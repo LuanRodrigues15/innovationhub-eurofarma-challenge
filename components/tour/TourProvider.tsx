@@ -20,8 +20,9 @@ import {
   type TourRun,
 } from './steps'
 
-// Tour guiado opcional. Fica por cima do site, que segue navegável: quando a pessoa explora por conta,
-// o botão vibra e oferece o tour daquela aba ou perfil. O estado vive em sessionStorage.
+// Tour guiado opcional. Os controles (Voltar e Próximo) ficam fixos no canto da tela; o balão de
+// texto se move até a parte do site que está sendo mostrada. O site segue navegável: quando a pessoa
+// explora por conta, o botão vibra e oferece o tour daquela aba ou perfil. Estado em sessionStorage.
 
 const STORAGE_KEY = 'ih-demo-tour'
 const MAX_DISMISSALS = 3
@@ -35,11 +36,13 @@ type TourState = {
   dismissals: number
 }
 type Nudge = { kind: 'page' | 'profile'; step: number; path: string; label: string }
+type Banner = { from: string; to: string }
 
 const DEFAULT_STATE: TourState = { on: false, i: 0, min: false, tip: true, nudged: {}, dismissals: 0 }
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const minLabel = (s: number) => (s >= 60 ? `~${Math.round(s / 60)} min` : `${s}s`)
+const personaLabel = (p: PersonaId | null) => (p ? ROLE_LABEL[p] : 'Tela inicial')
 
 function loadState(): TourState {
   try {
@@ -98,12 +101,83 @@ async function approveDemoIdea() {
   }
 }
 
+const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max)
+
+/** Posiciona o balão ao lado do elemento mostrado, sem cobri-lo nem a barra de controles. */
+function placeBubble(bubble: HTMLElement, bar: HTMLElement, target: Element | null) {
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const w = bubble.offsetWidth
+  const h = bubble.offsetHeight
+  const M = 12
+  const G = 14
+  const barRect = bar.getBoundingClientRect()
+
+  let left = vw - w - 16
+  let top = barRect.top - h - 10
+  let side = 'none'
+  let arrow = 0
+
+  const r = target?.getBoundingClientRect()
+  if (target && r && r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < vh && r.right > 0 && r.left < vw) {
+    // Prefere o lado do elemento (não cobre o conteúdo abaixo dele); acima e abaixo ficam de reserva
+    const bySpace = (a: { space: number }, b: { space: number }) => b.space - a.space
+    const sides = [
+      ...[
+        { s: 'right', space: vw - r.right },
+        { s: 'left', space: r.left },
+      ].sort(bySpace),
+      ...[
+        { s: 'bottom', space: vh - r.bottom },
+        { s: 'top', space: r.top },
+      ].sort(bySpace),
+    ]
+
+    for (const { s } of sides) {
+      let x: number
+      let y: number
+      if (s === 'right') { x = r.right + G; y = clamp(r.top + r.height / 2 - h / 2, M, vh - h - M) }
+      else if (s === 'left') { x = r.left - G - w; y = clamp(r.top + r.height / 2 - h / 2, M, vh - h - M) }
+      else if (s === 'bottom') { x = clamp(r.left + r.width / 2 - w / 2, M, vw - w - M); y = r.bottom + G }
+      else { x = clamp(r.left + r.width / 2 - w / 2, M, vw - w - M); y = r.top - G - h }
+
+      if (x < M || x + w > vw - M || y < M || y + h > vh - M) continue
+      const hitsBar = x < barRect.right && x + w > barRect.left && y < barRect.bottom && y + h > barRect.top
+      if (hitsBar) continue
+
+      left = x
+      top = y
+      side = s
+      arrow = s === 'right' || s === 'left'
+        ? clamp(r.top + r.height / 2 - y, 20, h - 20)
+        : clamp(r.left + r.width / 2 - x, 20, w - 20)
+      break
+    }
+  }
+
+  // A primeira colocação é instantânea; só os movimentos seguintes (de um passo ao outro) animam
+  const first = !bubble.classList.contains('placed')
+  if (first) bubble.style.transition = 'none'
+  bubble.style.left = `${Math.round(left)}px`
+  bubble.style.top = `${Math.round(top)}px`
+  bubble.dataset.side = side
+  bubble.style.setProperty('--arrow', `${Math.round(arrow)}px`)
+  if (first) {
+    void bubble.offsetWidth
+    bubble.classList.add('placed')
+    requestAnimationFrame(() => {
+      bubble.style.transition = ''
+    })
+  }
+}
+
 export default function TourProvider() {
   const router = useRouter()
   const pathname = usePathname()
   const [ready, setReady] = useState(false)
   const [tour, setTour] = useState<TourState>(DEFAULT_STATE)
   const [nudge, setNudge] = useState<Nudge | null>(null)
+  const [banner, setBanner] = useState<Banner | null>(null)
 
   const tourRef = useRef(tour)
   const pathRef = useRef(pathname)
@@ -112,6 +186,9 @@ export default function TourProvider() {
   const pendingLogin = useRef<string | null>(null)
   const prev = useRef<{ persona: PersonaId | null; path: string } | null>(null)
   const nudgeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const bubbleRef = useRef<HTMLDivElement>(null)
+  const barRef = useRef<HTMLDivElement>(null)
 
   const save = useCallback((next: TourState) => {
     tourRef.current = next
@@ -165,6 +242,13 @@ export default function TourProvider() {
       save({ ...tourRef.current, on: true, i, tip: false })
 
       const persona = currentPersona()
+      // Deixa explícito em qual perfil o tour está quando ele troca de usuário
+      if (persona !== st.persona) {
+        setBanner({ from: personaLabel(persona), to: personaLabel(st.persona) })
+        if (bannerTimer.current) clearTimeout(bannerTimer.current)
+        bannerTimer.current = setTimeout(() => setBanner(null), 3200)
+      }
+
       if (st.persona === null) {
         if (persona) {
           await signOut()
@@ -220,7 +304,7 @@ export default function TourProvider() {
       setNudge({ kind, step, path, label: kind === 'page' ? PAGE_LABEL[key] ?? key : ROLE_LABEL[persona] })
 
       requestAnimationFrame(() => {
-        const pill = document.querySelector('.tour-pill')
+        const pill = document.querySelector('.tour-pill, .tour-bar')
         pill?.classList.add('shake')
         setTimeout(() => pill?.classList.remove('shake'), 1500)
       })
@@ -250,36 +334,41 @@ export default function TourProvider() {
     else if (normalizePath(pathname) !== normalizePath(before.path)) maybeNudge('page', persona, key, pathname)
   }, [pathname, ready, enterStep, maybeNudge])
 
-  // Destaque do elemento do passo; reaplicado porque o React recria os elementos
+  // Destaque e posição do balão; reaplicados porque o React recria os elementos da página
   useEffect(() => {
-    const apply = () => {
-      document.querySelectorAll('.tour-hl').forEach((e) => e.classList.remove('tour-hl'))
-      if (!tour.on || nudge) return
-      const sel = STEPS[tour.i].hl
-      if (!sel) return
-      try {
-        const target = findTarget(sel)
-        target?.classList.add('tour-hl')
-        // o balão sai para a esquerda quando cobriria o elemento destacado
-        const card = document.querySelector('.tour-card')
-        if (target && card) {
-          const t = target.getBoundingClientRect()
-          card.classList.remove('tour-left')
-          const c = card.getBoundingClientRect()
-          const overlaps = t.right > c.left && t.left < c.right && t.bottom > c.top && t.top < c.bottom
-          if (overlaps) card.classList.add('tour-left')
-        }
-      } catch {
-        // seletor inválido nunca deve derrubar a página
-      }
+    const clearHighlight = () => document.querySelectorAll('.tour-hl').forEach((e) => e.classList.remove('tour-hl'))
+    if (!tour.on || nudge) {
+      clearHighlight()
+      return
     }
-    apply()
-    const timer = setInterval(apply, 500)
+    let scrolledFor = -1
+    const tick = () => {
+      clearHighlight()
+      let target: Element | null = null
+      const sel = STEPS[tour.i].hl
+      if (sel) {
+        try {
+          target = findTarget(sel)
+        } catch {
+          target = null
+        }
+      }
+      target?.classList.add('tour-hl')
+      if (target && scrolledFor !== tour.i) {
+        scrolledFor = tour.i
+        target.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      }
+      if (bubbleRef.current && barRef.current) placeBubble(bubbleRef.current, barRef.current, target)
+    }
+    tick()
+    const timer = setInterval(tick, 250)
+    window.addEventListener('resize', tick)
     return () => {
       clearInterval(timer)
-      document.querySelectorAll('.tour-hl').forEach((e) => e.classList.remove('tour-hl'))
+      window.removeEventListener('resize', tick)
+      clearHighlight()
     }
-  }, [tour.on, tour.i, nudge])
+  }, [tour.on, tour.i, tour.min, nudge])
 
   function toggle() {
     clearNudge()
@@ -304,6 +393,9 @@ export default function TourProvider() {
       if (button) {
         pendingLogin.current = '/dashboard'
         skipUntil.current = Date.now() + 5000
+        setBanner({ from: personaLabel(null), to: personaLabel('funcionario') })
+        if (bannerTimer.current) clearTimeout(bannerTimer.current)
+        bannerTimer.current = setTimeout(() => setBanner(null), 3200)
         button.click()
         return
       }
@@ -353,9 +445,20 @@ export default function TourProvider() {
   const st = STEPS[tour.i]
   const remaining = STEPS.slice(tour.i).reduce((a, s) => a + s.sec, 0)
   const last = tour.i === STEPS.length - 1
+  const stepPersona = st.persona ?? 'none'
 
   return (
     <>
+      {banner && (
+        <div className="tour-switch" role="status">
+          <Icon name="refresh-cw" size={14} />
+          <span>Trocando de perfil</span>
+          <b>{banner.from}</b>
+          <Icon name="chevron-right" size={13} />
+          <b>{banner.to}</b>
+        </div>
+      )}
+
       {nudge ? (
         <div className="tour-nudge" role="alertdialog" aria-label="Convite para o tour">
           <p>
@@ -371,19 +474,15 @@ export default function TourProvider() {
           </div>
         </div>
       ) : tour.on ? (
-        <div className={`tour-card${tour.min ? ' min' : ''}`} role="dialog" aria-label="Tour guiado">
+        <div ref={bubbleRef} className={`tour-bubble${tour.min ? ' min' : ''}`} role="dialog" aria-label="Tour guiado" data-side="none">
           <div className="tour-top">
-            <span>{tour.i + 1}/{STEPS.length} · {minLabel(remaining)} restantes</span>
-            <span className="tour-ctl">
-              <button type="button" aria-label={tour.min ? 'Expandir o balão' : 'Recolher o balão'} onClick={() => save({ ...tour, min: !tour.min })}>
-                <Icon name={tour.min ? 'plus' : 'minus'} size={12} />
-              </button>
-              <button type="button" aria-label="Desligar o tour" onClick={toggle}>
-                <Icon name="x" size={12} />
-              </button>
+            <span className="tour-persona" data-p={stepPersona}>
+              <i /> Perfil: {personaLabel(st.persona)}
             </span>
+            <button type="button" aria-label={tour.min ? 'Expandir o balão' : 'Recolher o balão'} onClick={() => save({ ...tour, min: !tour.min })}>
+              <Icon name={tour.min ? 'plus' : 'minus'} size={12} />
+            </button>
           </div>
-          <div className="tour-prog"><i style={{ width: `${((tour.i + 1) / STEPS.length) * 100}%` }} /></div>
           <h3>{st.title}</h3>
           <p>{st.text}</p>
           {st.also && (
@@ -399,12 +498,6 @@ export default function TourProvider() {
               <button type="button" onClick={restart}>Recomeçar o tour</button>
             </div>
           )}
-          <div className="tour-foot">
-            <button type="button" onClick={previous} disabled={tour.i === 0}>Voltar</button>
-            <button type="button" className="primary" onClick={next}>
-              {last ? 'Concluir' : 'Próximo'} <Icon name="chevron-right" size={14} />
-            </button>
-          </div>
         </div>
       ) : tour.tip ? (
         <div className="tour-tip" role="status">
@@ -415,20 +508,41 @@ export default function TourProvider() {
         </div>
       ) : null}
 
-      <button
-        type="button"
-        role="switch"
-        aria-checked={tour.on}
-        className={`tour-pill${tour.on ? ' on' : ''}${!tour.on && tour.tip && !nudge ? ' pulse' : ''}`}
-        title={tour.on ? 'Desativar o tour' : 'Ativar o tour guiado'}
-        onClick={toggle}
-      >
-        <Icon name="sparkles" size={15} />
-        <span>
-          {tour.on ? 'Tour ativo' : 'Fazer o tour'} <small>{tour.on ? `${tour.i + 1}/${STEPS.length}` : minLabel(TOTAL_SEC)}</small>
-        </span>
-        <span className="tour-sw" />
-      </button>
+      {tour.on ? (
+        <div ref={barRef} className="tour-bar" role="group" aria-label="Controles do tour" style={{ ['--p' as string]: (tour.i + 1) / STEPS.length }}>
+          <span className="tour-bar-info">
+            <Icon name="sparkles" size={14} />
+            <span>
+              {tour.i + 1}/{STEPS.length} <small>{minLabel(remaining)}</small>
+            </span>
+          </span>
+          <button type="button" className="tour-nav" onClick={previous} disabled={tour.i === 0}>
+            Voltar
+          </button>
+          <button type="button" className="tour-nav primary" onClick={next}>
+            {last ? 'Concluir' : 'Próximo'} <Icon name="chevron-right" size={14} />
+          </button>
+          <button type="button" role="switch" aria-checked="true" aria-label="Desligar o tour" className="tour-switch-btn" onClick={toggle}>
+            <span className="tour-sw" />
+          </button>
+        </div>
+      ) : (
+        <button
+          ref={barRef as unknown as React.RefObject<HTMLButtonElement>}
+          type="button"
+          role="switch"
+          aria-checked={false}
+          className={`tour-pill${tour.tip && !nudge ? ' pulse' : ''}`}
+          title="Ativar o tour guiado"
+          onClick={toggle}
+        >
+          <Icon name="sparkles" size={15} />
+          <span>
+            Fazer o tour <small>{minLabel(TOTAL_SEC)}</small>
+          </span>
+          <span className="tour-sw" />
+        </button>
+      )}
     </>
   )
 }

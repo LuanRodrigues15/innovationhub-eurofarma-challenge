@@ -10461,9 +10461,10 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
 }
 
 /* ─── Tour guiado ─────────────────────────────────────────────
-   Botão no mesmo vidro fosco do modo banca original, em tamanho maior.
-   O balão fica por cima da página e não empurra o conteúdo. */
-.tour-pill {
+   Controles fixos no canto (mesmo vidro fosco do modo banca original, em tamanho maior) e um balão de
+   texto que se move até a parte do site mostrada. Tudo fica por cima da página, sem empurrar o conteúdo. */
+.tour-pill,
+.tour-bar {
   position: fixed;
   right: 18px;
   bottom: 18px;
@@ -10472,20 +10473,60 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   align-items: center;
   gap: 10px;
   padding: 8px 10px 8px 14px;
-  background: rgba(0, 0, 0, 0.45);
   color: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 10px;
+  border-radius: 12px;
+  font-family: var(--font);
   font-size: 13px;
   font-weight: 600;
-  font-family: inherit;
   white-space: nowrap;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
+.tour-pill { cursor: pointer; }
 .tour-pill:hover { color: #fff; border-color: rgba(255, 255, 255, 0.3); }
-.tour-pill small { font-size: 11px; font-weight: 500; opacity: 0.65; }
+.tour-pill small,
+.tour-bar small { font-size: 11px; font-weight: 500; opacity: 0.65; }
+.tour-pill.pulse { animation: tourPulse 2.2s ease-out infinite; }
+.tour-pill.shake,
+.tour-bar.shake { animation: tourShake 0.7s ease 2; }
+
+.tour-bar {
+  gap: 8px;
+  padding: 6px 8px 8px 12px;
+  color: #fff;
+  border-color: rgba(255, 198, 0, 0.45);
+}
+.tour-bar::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  bottom: 2px;
+  height: 2px;
+  width: calc((100% - 24px) * var(--p, 0));
+  background: #FFC600;
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+.tour-bar-info { display: flex; align-items: center; gap: 7px; color: #FFC600; margin-right: 4px; }
+.tour-bar-info > span { color: #fff; }
+.tour-nav {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.88);
+}
+.tour-nav:disabled { opacity: 0.35; cursor: default; }
+.tour-nav.primary { background: #FFC600; border-color: #FFC600; color: #0B1733; }
+.tour-nav.primary:hover { filter: brightness(1.06); }
+.tour-switch-btn { display: flex; align-items: center; margin-left: 2px; padding: 4px; }
+
 .tour-sw {
   position: relative;
   width: 34px;
@@ -10506,11 +10547,9 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   background: #fff;
   transition: transform 0.2s, background 0.2s;
 }
-.tour-pill.on { color: #fff; border-color: rgba(255, 198, 0, 0.45); }
-.tour-pill.on .tour-sw { background: #FFC600; }
-.tour-pill.on .tour-sw::after { transform: translateX(15px); background: #0B1733; }
-.tour-pill.pulse { animation: tourPulse 2.2s ease-out infinite; }
-.tour-pill.shake { animation: tourShake 0.7s ease 2; }
+.tour-bar .tour-sw { background: #FFC600; }
+.tour-bar .tour-sw::after { transform: translateX(15px); background: #0B1733; }
+
 @keyframes tourPulse {
   0% { box-shadow: 0 0 0 0 rgba(255, 198, 0, 0.5); }
   70% { box-shadow: 0 0 0 12px rgba(255, 198, 0, 0); }
@@ -10566,40 +10605,52 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
 }
 .tour-tip button:hover { opacity: 1; background: rgba(11, 23, 51, 0.1); }
 
-.tour-card,
+/* Balão de texto: posicionado por JS ao lado do elemento mostrado */
+.tour-bubble,
 .tour-nudge {
   position: fixed;
-  right: 16px;
-  bottom: 62px;
   z-index: 9998;
-  width: min(296px, calc(100vw - 24px));
-  max-height: calc(100dvh - 90px);
-  overflow-y: auto;
+  width: min(300px, calc(100vw - 24px));
   padding: 11px 13px 12px;
   color: #fff;
-  background: rgba(11, 23, 51, 0.86);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(11, 23, 51, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.34);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.36);
   font-family: var(--font);
+}
+.tour-bubble {
+  left: -9999px;
+  top: 0;
+  opacity: 0;
+  transition: left 0.35s ease, top 0.35s ease, opacity 0.2s ease;
+}
+.tour-bubble.placed { opacity: 1; }
+.tour-bubble::before {
+  content: "";
+  position: absolute;
+  display: none;
+  width: 12px;
+  height: 12px;
+  background: rgba(11, 23, 51, 0.95);
+  transform: rotate(45deg);
+  border: 0 solid rgba(255, 255, 255, 0.12);
+}
+.tour-bubble[data-side="right"]::before { display: block; left: -7px; top: calc(var(--arrow) - 6px); border-width: 0 0 1px 1px; }
+.tour-bubble[data-side="left"]::before { display: block; right: -7px; top: calc(var(--arrow) - 6px); border-width: 1px 1px 0 0; }
+.tour-bubble[data-side="bottom"]::before { display: block; top: -7px; left: calc(var(--arrow) - 6px); border-width: 1px 0 0 1px; }
+.tour-bubble[data-side="top"]::before { display: block; bottom: -7px; left: calc(var(--arrow) - 6px); border-width: 0 1px 1px 0; }
+
+.tour-nudge {
+  right: 16px;
+  bottom: 68px;
+  z-index: 9999;
+  width: min(280px, calc(100vw - 24px));
+  border-color: rgba(255, 198, 0, 0.45);
   animation: fadeUp 0.3s ease both;
 }
-.tour-nudge { z-index: 9999; border-color: rgba(255, 198, 0, 0.45); width: min(280px, calc(100vw - 24px)); }
-.tour-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: #FFC600;
-  text-transform: uppercase;
-}
-.tour-ctl { display: flex; gap: 2px; }
-.tour-ctl button {
+.tour-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+.tour-top > button {
   width: 20px;
   height: 20px;
   display: inline-flex;
@@ -10608,13 +10659,31 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   border-radius: 6px;
   color: rgba(255, 255, 255, 0.55);
 }
-.tour-ctl button:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
-.tour-prog { height: 2px; margin: 8px 0 10px; border-radius: 99px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
-.tour-prog i { display: block; height: 100%; background: #FFC600; border-radius: 99px; transition: width 0.3s ease; }
-.tour-card h3 { margin: 0 0 4px; font-size: 13.5px; font-weight: 700; color: #fff; }
-.tour-card p,
+.tour-top > button:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.tour-persona {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 99px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+.tour-persona i { width: 7px; height: 7px; border-radius: 50%; background: #94a3b8; }
+.tour-persona[data-p="funcionario"] i { background: #38bdf8; }
+.tour-persona[data-p="gestor"] i { background: #a78bfa; }
+.tour-persona[data-p="admin"] i { background: #fb923c; }
+.tour-persona[data-p="totem"] i { background: #34d399; }
+.tour-bubble h3 { margin: 0 0 4px; font-size: 13.5px; font-weight: 700; color: #fff; }
+.tour-bubble p,
 .tour-nudge p { margin: 0; font-size: 12.5px; line-height: 1.5; color: rgba(255, 255, 255, 0.78); }
 .tour-nudge b { color: #FFC600; font-weight: 700; }
+.tour-bubble.min p,
+.tour-bubble.min .tour-also { display: none; }
+.tour-bubble.min h3 { margin-bottom: 0; }
 .tour-also { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; font-size: 11.5px; color: rgba(255, 255, 255, 0.5); }
 .tour-also button {
   padding: 4px 10px;
@@ -10625,16 +10694,9 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   color: rgba(255, 255, 255, 0.88);
 }
 .tour-also button:hover { border-color: #FFC600; color: #FFC600; }
-.tour-foot,
-.tour-nudge-btns { display: flex; gap: 6px; margin-top: 12px; }
-.tour-nudge-btns { margin-top: 10px; }
-.tour-foot button,
+.tour-nudge-btns { display: flex; gap: 6px; margin-top: 10px; }
 .tour-nudge-btns button {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
   padding: 7px 10px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 9px;
@@ -10642,13 +10704,35 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   font-weight: 700;
   color: rgba(255, 255, 255, 0.85);
 }
-.tour-foot button:disabled { opacity: 0.35; cursor: default; }
-.tour-foot button.primary,
 .tour-nudge-btns .primary { background: #FFC600; border-color: #FFC600; color: #0B1733; }
-.tour-foot button.primary:hover { filter: brightness(1.06); }
-.tour-card.min p,
-.tour-card.min .tour-also { display: none; }
-.tour-card.min h3 { margin-bottom: 0; }
+
+/* Aviso de troca de perfil: deixa explícito em qual usuário o tour está */
+.tour-switch {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(11, 23, 51, 0.95);
+  border: 1px solid rgba(255, 198, 0, 0.55);
+  border-radius: 99px;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.34);
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  animation: tourBanner 3.2s ease both;
+}
+.tour-switch b { color: #FFC600; font-weight: 800; }
+@keyframes tourBanner {
+  0% { opacity: 0; transform: translate(-50%, -10px); }
+  10%, 85% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -6px); }
+}
 
 .tour-hl {
   outline: 2px solid #FFC600 !important;
@@ -10661,16 +10745,10 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   50% { outline-color: rgba(255, 198, 0, 0.35); }
 }
 
-/* O botão flutuante "Nova ideia" do Hub fica no mesmo canto: o tour sobe para não cobri-lo */
-body:has(button[aria-label="Nova ideia"]) .tour-pill { bottom: 88px; }
-body:has(button[aria-label="Nova ideia"]) .tour-card,
-body:has(button[aria-label="Nova ideia"]) .tour-nudge,
-body:has(button[aria-label="Nova ideia"]) .tour-tip { bottom: 132px; }
-
 @media (max-width: 640px) {
-  .tour-pill { right: 12px; bottom: 12px; font-size: 12px; padding: 7px 9px 7px 12px; }
-  .tour-card, .tour-nudge { right: 12px; bottom: 60px; }
+  .tour-pill,
+  .tour-bar { right: 12px; bottom: 12px; font-size: 12px; padding: 6px 8px 8px 10px; }
+  .tour-bar-info small { display: none; }
+  .tour-nudge { right: 12px; bottom: 62px; }
   .tour-tip { right: 12px; bottom: 58px; }
 }
-
-.tour-card.tour-left { right: auto; left: 16px; }
