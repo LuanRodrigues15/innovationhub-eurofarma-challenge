@@ -1,5 +1,15 @@
 # Changelog de agentes
 
+## Tour contado pela Eura em um chat
+
+- O tour virou uma conversa: a Eura fala em primeira pessoa, cada passo é uma mensagem (com "digitando" e efeito de
+  máquina de escrever) e as ações da pessoa viram mensagens suas ("Próximo", "Voltar", "Ver Métricas").
+- Chat com minimizar (fica só a barra de controles, com o avatar e um ponto de aviso) e maximizar; escolhe o canto
+  (direito ou esquerdo) que cobre menos a página e nunca o elemento destacado.
+- Campo de pergunta com respostas simples por regras (dados, senha, pontos, Totem, gestor, admin, Eura) e atalhos
+  de próximo, voltar e sair por texto. Convite do tour passou a ser da Eura.
+- Substituídos o balão ancorado, a linha de ligação e o arraste.
+
 ## Balão do tour fora do caminho
 
 - O balão escolhe o lugar que cobre menos conteúdo: avalia candidatos colados no elemento, a algumas distâncias e

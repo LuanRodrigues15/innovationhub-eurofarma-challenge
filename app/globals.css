@@ -10460,9 +10460,9 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   cursor: default;
 }
 
-/* ─── Tour guiado ─────────────────────────────────────────────
-   Controles fixos no canto (mesmo vidro fosco do modo banca original, em tamanho maior) e um balão de
-   texto que se move até a parte do site mostrada. Tudo fica por cima da página, sem empurrar o conteúdo. */
+/* ─── Tour guiado, contado pela Eura em um chat ───────────────
+   Barra de controles fixa no canto (mesmo vidro fosco do modo banca original, em tamanho maior) e um chat
+   que pode ser minimizado ou maximizado. Tudo fica por cima da página, sem empurrar o conteúdo. */
 .tour-pill,
 .tour-bar {
   position: fixed;
@@ -10494,23 +10494,34 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
 
 .tour-bar {
   gap: 8px;
-  padding: 6px 8px 8px 12px;
+  padding: 6px 8px 8px 8px;
   color: #fff;
   border-color: rgba(255, 198, 0, 0.45);
 }
 .tour-bar::after {
   content: "";
   position: absolute;
-  left: 12px;
+  left: 10px;
   bottom: 2px;
   height: 2px;
-  width: calc((100% - 24px) * var(--p, 0));
+  width: calc((100% - 20px) * var(--p, 0));
   background: #FFC600;
   border-radius: 99px;
   transition: width 0.3s ease;
 }
-.tour-bar-info { display: flex; align-items: center; gap: 7px; color: #FFC600; margin-right: 4px; }
-.tour-bar-info > span { color: #fff; }
+.tour-bar-info { color: #fff; margin: 0 2px; }
+.tour-bar-eura { position: relative; display: flex; border-radius: 10px; }
+.tour-bar-eura:hover .tour-eura { border-color: #FFC600; }
+.tour-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #FFC600;
+  border: 2px solid #0B1733;
+}
 .tour-nav {
   display: flex;
   align-items: center;
@@ -10564,12 +10575,23 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   75% { transform: translateX(-3px); }
 }
 
+/* Avatar da Eura, no mesmo estilo do chat da tela inicial */
+.tour-eura {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: rgba(11, 23, 51, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #FFC600;
+}
+
 .tour-tip {
   position: fixed;
   right: 18px;
   bottom: 68px;
   z-index: 9999;
-  max-width: 240px;
+  max-width: 250px;
   padding: 10px 30px 10px 13px;
   background: #FFC600;
   color: #0B1733;
@@ -10605,98 +10627,179 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
 }
 .tour-tip button:hover { opacity: 1; background: rgba(11, 23, 51, 0.1); }
 
-/* Balão de texto: posicionado por JS ao lado do elemento mostrado */
-.tour-bubble,
-.tour-nudge {
+/* Chat da Eura */
+.tour-chat {
   position: fixed;
+  right: 18px;
+  bottom: 76px;
   z-index: 9998;
-  width: min(300px, calc(100vw - 24px));
-  padding: 11px 13px 12px;
+  width: 340px;
+  height: min(430px, calc(100dvh - 120px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   color: #fff;
-  background: rgba(11, 23, 51, 0.95);
+  background: rgba(11, 23, 51, 0.97);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.36);
+  border-radius: 16px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
   font-family: var(--font);
+  animation: fadeUp 0.25s ease both;
+  transition: width 0.25s ease, height 0.25s ease;
 }
-.tour-bubble {
-  left: -9999px;
-  top: 0;
-  opacity: 0;
-  transition: left 0.35s ease, top 0.35s ease, opacity 0.2s ease;
+.tour-chat.left { right: auto; left: 18px; }
+.tour-chat.big {
+  width: min(470px, calc(100vw - 36px));
+  height: min(640px, calc(100dvh - 120px));
 }
-.tour-bubble.placed { opacity: 1; }
-.tour-bubble::before {
-  content: "";
-  position: absolute;
-  display: none;
-  width: 12px;
-  height: 12px;
-  background: rgba(11, 23, 51, 0.95);
-  transform: rotate(45deg);
-  border: 0 solid rgba(255, 255, 255, 0.12);
+.tour-chat-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
-.tour-bubble[data-side="right"]::before { display: block; left: -7px; top: calc(var(--arrow) - 6px); border-width: 0 0 1px 1px; }
-.tour-bubble[data-side="left"]::before { display: block; right: -7px; top: calc(var(--arrow) - 6px); border-width: 1px 1px 0 0; }
-.tour-bubble[data-side="bottom"]::before { display: block; top: -7px; left: calc(var(--arrow) - 6px); border-width: 1px 0 0 1px; }
-.tour-bubble[data-side="top"]::before { display: block; bottom: -7px; left: calc(var(--arrow) - 6px); border-width: 0 1px 1px 0; }
-
-.tour-nudge {
-  right: 16px;
-  bottom: 68px;
-  z-index: 9999;
-  width: min(280px, calc(100vw - 24px));
-  border-color: rgba(255, 198, 0, 0.45);
-  animation: fadeUp 0.3s ease both;
-}
-.tour-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
-.tour-top { cursor: grab; touch-action: none; user-select: none; }
-.tour-top:active { cursor: grabbing; }
-.tour-ctl { display: flex; gap: 2px; }
-.tour-ctl button {
-  width: 20px;
-  height: 20px;
+.tour-chat-head .who { flex: 1; min-width: 0; }
+.tour-chat-head .who b { display: block; font-size: 13.5px; line-height: 1.2; }
+.tour-chat-head .who small { display: block; margin-top: 3px; }
+.tour-chat-head > button {
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
-  color: rgba(255, 255, 255, 0.55);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.6);
 }
-.tour-ctl button:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.tour-chat-head > button:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+
 .tour-persona {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 9px;
+  padding: 2px 8px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 99px;
   font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.85);
 }
 .tour-persona i { width: 7px; height: 7px; border-radius: 50%; background: #94a3b8; }
 .tour-persona[data-p="funcionario"] i { background: #38bdf8; }
 .tour-persona[data-p="gestor"] i { background: #a78bfa; }
 .tour-persona[data-p="admin"] i { background: #fb923c; }
 .tour-persona[data-p="totem"] i { background: #34d399; }
-.tour-bubble h3 { margin: 0 0 4px; font-size: 13.5px; font-weight: 700; color: #fff; }
-.tour-bubble p,
-.tour-nudge p { margin: 0; font-size: 12.5px; line-height: 1.5; color: rgba(255, 255, 255, 0.78); }
-.tour-nudge b { color: #FFC600; font-weight: 700; }
-.tour-bubble.min p,
-.tour-bubble.min .tour-also { display: none; }
-.tour-bubble.min h3 { margin-bottom: 0; }
-.tour-also { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; font-size: 11.5px; color: rgba(255, 255, 255, 0.5); }
-.tour-also button {
-  padding: 4px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+
+.tour-chat-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+.tour-msg { display: flex; align-items: flex-end; gap: 8px; max-width: 94%; animation: fadeUp 0.25s ease both; }
+.tour-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+.tour-bub {
+  padding: 9px 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px 14px 14px 4px;
+}
+.tour-msg.user .tour-bub {
+  color: #0B1733;
+  font-weight: 700;
+  background: #FFC600;
+  border-color: #FFC600;
+  border-radius: 14px 14px 4px 14px;
+}
+.tour-bub h4 {
+  margin: 0 0 3px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #FFC600;
+}
+.tour-sys {
+  align-self: center;
+  padding: 3px 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px dashed rgba(255, 255, 255, 0.22);
   border-radius: 99px;
+}
+.tour-typing { display: inline-flex; gap: 4px; padding: 4px 0; }
+.tour-typing span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.6); animation: tourDot 1s infinite; }
+.tour-typing span:nth-child(2) { animation-delay: 0.15s; }
+.tour-typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes tourDot {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+.tour-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.tour-chips button,
+.tour-suggest button {
+  padding: 5px 11px;
   font-size: 11.5px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 198, 0, 0.5);
+  border-radius: 99px;
 }
-.tour-also button:hover { border-color: #FFC600; color: #FFC600; }
+.tour-chips button:hover,
+.tour-suggest button:hover { background: rgba(255, 198, 0, 0.14); color: #FFC600; }
+.tour-suggest { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 8px; }
+.tour-suggest button { border-color: rgba(255, 255, 255, 0.18); color: rgba(255, 255, 255, 0.7); }
+.tour-chat-foot { display: flex; gap: 6px; padding: 9px 10px 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.tour-chat-foot input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 11px;
+  font-size: 12.5px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  outline: none;
+}
+.tour-chat-foot input::placeholder { color: rgba(255, 255, 255, 0.4); }
+.tour-chat-foot input:focus { border-color: #FFC600; }
+.tour-chat-foot button {
+  width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0B1733;
+  background: #FFC600;
+  border-radius: 10px;
+}
+
+/* Convite da Eura quando a pessoa explora por conta */
+.tour-nudge {
+  position: fixed;
+  right: 16px;
+  bottom: 68px;
+  z-index: 9999;
+  width: min(290px, calc(100vw - 24px));
+  padding: 11px 13px 12px;
+  color: #fff;
+  background: rgba(11, 23, 51, 0.97);
+  border: 1px solid rgba(255, 198, 0, 0.5);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.36);
+  font-family: var(--font);
+  animation: fadeUp 0.3s ease both;
+}
+.tour-nudge-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12.5px; }
+.tour-nudge p { margin: 0; font-size: 12.5px; line-height: 1.5; color: rgba(255, 255, 255, 0.82); }
+.tour-nudge p b { color: #FFC600; font-weight: 700; }
 .tour-nudge-btns { display: flex; gap: 6px; margin-top: 10px; }
 .tour-nudge-btns button {
   flex: 1;
@@ -10750,13 +10853,11 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
 
 @media (max-width: 640px) {
   .tour-pill,
-  .tour-bar { right: 12px; bottom: 12px; font-size: 12px; padding: 6px 8px 8px 10px; }
+  .tour-bar { right: 12px; bottom: 12px; font-size: 12px; }
   .tour-bar-info small { display: none; }
+  .tour-chat,
+  .tour-chat.left { left: 12px; right: 12px; bottom: 70px; width: auto; height: min(55dvh, 440px); }
+  .tour-chat.big { width: auto; height: calc(100dvh - 130px); }
   .tour-nudge { right: 12px; bottom: 62px; }
   .tour-tip { right: 12px; bottom: 58px; }
 }
-
-/* Linha pontilhada do balão até o elemento mostrado, quando os dois não se tocam */
-.tour-link { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 9997; pointer-events: none; overflow: visible; }
-.tour-link line { stroke: #FFC600; stroke-width: 1.2; stroke-dasharray: 3 5; stroke-opacity: 0.65; opacity: 0; transition: opacity 0.2s; }
-.tour-link circle { fill: #FFC600; opacity: 0; transition: opacity 0.2s; }

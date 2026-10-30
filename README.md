@@ -26,7 +26,7 @@
 | <img width="800" alt="Acessar como" src="docs/screenshots/02-acessar-como.png" /> | <img width="800" alt="Innovation IA" src="docs/screenshots/04-innovation-ia.png" /> |
 | Hub de Ideias | Triagem do gestor com peso do score híbrido |
 | <img width="800" alt="Hub de Ideias" src="docs/screenshots/05-hub-de-ideias.png" /> | <img width="800" alt="Triagem do gestor" src="docs/screenshots/08-triagem-gestor.png" /> |
-| Modo Totem para o chão de fábrica | Tour guiado, com o perfil sempre explícito |
+| Modo Totem para o chão de fábrica | Tour guiado pela Eura, em um chat que minimiza e maximiza |
 | <img width="800" alt="Modo Totem" src="docs/screenshots/12-modo-totem.png" /> | <img width="800" alt="Tour guiado" src="docs/screenshots/14-tour-guiado.png" /> |
 
 ## Sobre o projeto
@@ -44,7 +44,7 @@ Boas ideias ficam presas em quem as tem, principalmente no chão de fábrica. O 
 
 Clique em **Acessar a plataforma** e escolha **Funcionário**, **Gestor**, **Administrador** ou **Totem**. Não há senha.
 
-O botão **Fazer o tour** (canto inferior direito) conta a jornada de uma ideia em 14 passos, em cerca de 3 minutos, trocando de perfil sozinho. É opcional e, se você explorar por conta, ele oferece o tour da aba ou do perfil em que você está.
+O botão **Fazer o tour** (canto inferior direito) abre um chat em que a **Eura** conta a jornada de uma ideia em 14 passos, em cerca de 3 minutos, trocando de perfil sozinha. O chat pode ser minimizado ou maximizado e responde a perguntas simples. É opcional e, se você explorar por conta, a Eura oferece o tour da aba ou do perfil em que você está.
 
 ## O que é simulado
 
