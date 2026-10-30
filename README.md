@@ -10,7 +10,7 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?logo=tailwindcss&logoColor=white)
 ![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-222222?logo=githubpages&logoColor=white)
 
-**[Ver demo ao vivo](https://luanrodrigues15.github.io/innovationhub-eurofarma-challenge/)** · entre com um clique em "Acessar como" e ative o tour guiado no canto da tela
+**[Ver demo ao vivo](https://luanrodrigues15.github.io/innovationhub-eurofarma-challenge/)** · entre com um clique em "Acessar como" e ative o tour guiado no canto inferior esquerdo
 
 </div>
 
@@ -26,7 +26,7 @@
 | <img width="800" alt="Acessar como" src="docs/screenshots/02-acessar-como.png" /> | <img width="800" alt="Innovation IA" src="docs/screenshots/04-innovation-ia.png" /> |
 | Hub de Ideias | Triagem do gestor com peso do score híbrido |
 | <img width="800" alt="Hub de Ideias" src="docs/screenshots/05-hub-de-ideias.png" /> | <img width="800" alt="Triagem do gestor" src="docs/screenshots/08-triagem-gestor.png" /> |
-| Modo Totem para o chão de fábrica | Tour guiado pela Eura, em um chat que minimiza e maximiza |
+| Modo Totem para o chão de fábrica | Tour guiado pela Eura, em um cartão que mora na barra lateral |
 | <img width="800" alt="Modo Totem" src="docs/screenshots/12-modo-totem.png" /> | <img width="800" alt="Tour guiado" src="docs/screenshots/14-tour-guiado.png" /> |
 
 ## Sobre o projeto
@@ -44,14 +44,18 @@ Boas ideias ficam presas em quem as tem, principalmente no chão de fábrica. O 
 
 Clique em **Acessar a plataforma** e escolha **Funcionário**, **Gestor**, **Administrador** ou **Totem**. Não há senha.
 
-O botão **Fazer o tour** (canto inferior direito) abre um chat em que a **Eura** conta a jornada de uma ideia em 14 passos, em cerca de 3 minutos, trocando de perfil sozinha. O chat pode ser minimizado ou maximizado e responde a perguntas simples. É opcional e, se você explorar por conta, a Eura oferece o tour da aba ou do perfil em que você está.
+O botão **Fazer o tour** (canto inferior esquerdo) chama a **Eura**, que conta a jornada de uma ideia em 14 passos, em cerca de 3 minutos, trocando de perfil sozinha. É opcional e foi pensado para não atrapalhar a leitura do site:
+
+- **Cartão compacto:** fica no espaço vazio da barra lateral e, nas telas sem barra lateral, no canto que cobre menos conteúdo. Voltar e Próximo ficam sempre no mesmo lugar.
+- **Dá para recolher:** o texto minimiza e deixa só os controles.
+- **Retoma de onde parou:** se você começar a mexer em outra parte do site, o tour pausa e oferece continuar do passo em que estava, ou mostrar a aba ou o perfil em que você está.
 
 ## O que é simulado
 
 | Versão original | Esta versão |
 |---|---|
 | Supabase (PostgreSQL e Auth) | Banco em memória com a mesma API do `supabase-js` (`lib/mock`) |
-| Google Gemini | Eura simulada por regras, mais as demos roteirizadas do pitch |
+| Google Gemini | Eura simulada por regras |
 | Login com e-mail e senha | Perfis de demonstração com um clique |
 | Middleware e layouts de servidor | Proteção de rota por perfil no navegador |
 

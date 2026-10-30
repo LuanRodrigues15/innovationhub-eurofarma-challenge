@@ -20,35 +20,33 @@ import {
   type TourRun,
 } from './steps'
 
-// Tour guiado opcional, contado pela Eura em um chat que pode ser minimizado ou maximizado. Os controles
-// (Voltar e Próximo) ficam fixos no canto; o chat escolhe o canto que cobre menos a página. O site segue
-// navegável: quando a pessoa explora por conta, o botão vibra e a Eura oferece o tour daquela aba ou perfil.
+// Tour guiado opcional, contado pela Eura em um cartão compacto. Ele mora em um espaço que já está vazio:
+// na barra lateral do app (entre o menu e o usuário) e, nas telas sem barra lateral, no canto que cobre
+// menos. Voltar e Próximo ficam dentro do cartão, sempre no mesmo lugar. Quando a pessoa mexe em outra
+// parte do site, o tour pausa e oferece continuar de onde parou. Estado em sessionStorage.
 
 const STORAGE_KEY = 'ih-demo-tour'
 const MAX_DISMISSALS = 3
-const MAX_MESSAGES = 40
 
 type TourState = {
   on: boolean
   i: number
-  /** Chat aberto (false = minimizado: só a barra de controles). */
-  open: boolean
-  /** Chat maximizado. */
-  big: boolean
+  /** Cartão recolhido: fica só a barra com os controles. */
+  min: boolean
   tip: boolean
   nudged: Record<string, true>
   dismissals: number
 }
 type Nudge = { kind: 'page' | 'profile'; step: number; path: string; label: string }
 type Banner = { from: string; to: string }
-type ChatMsg = { id: number; from: 'eura' | 'user' | 'sys'; text?: string; title?: string; typing?: boolean; fresh?: boolean }
+type Anchor = { align: 'left' | 'right' | 'center'; x: number; bottom: number }
 
-const DEFAULT_STATE: TourState = { on: false, i: 0, open: true, big: false, tip: true, nudged: {}, dismissals: 0 }
+const DEFAULT_STATE: TourState = { on: false, i: 0, min: false, tip: true, nudged: {}, dismissals: 0 }
+const DEFAULT_ANCHOR: Anchor = { align: 'left', x: 18, bottom: 18 }
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const minLabel = (s: number) => (s >= 60 ? `~${Math.round(s / 60)} min` : `${s}s`)
 const personaLabel = (p: PersonaId | null) => (p ? ROLE_LABEL[p] : 'Tela inicial')
-const plain = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 function loadState(): TourState {
   try {
@@ -107,12 +105,12 @@ async function approveDemoIdea() {
   }
 }
 
-/* ───────── onde o chat fica: o canto que cobre menos a página ───────── */
+/* ───────── onde o tour fica: um espaço que já está vazio ───────── */
 
-const OVERLAY_UI = '.tour-bar,.tour-nudge,.tour-tip,.tour-switch'
+const OVERLAY_UI = '.tour-dock,.tour-switch'
 const INTERACTIVE = 'button,a,[role="button"],input,textarea,select,label'
 
-/** O ponto da tela tem algo que o chat esconderia: texto, botão, campo, ícone ou imagem. */
+/** O ponto da tela tem algo que o tour esconderia: texto, botão, campo, ícone ou imagem. */
 function isContent(el: Element | null): boolean {
   if (!el || el.closest(OVERLAY_UI)) return false
   if (el.closest(INTERACTIVE) || el instanceof SVGElement || el instanceof HTMLImageElement) return true
@@ -130,39 +128,81 @@ function coverage(x: number, y: number, w: number, h: number): number {
   return count
 }
 
-/* ───────── conversa ───────── */
+/**
+ * Escolhe onde ancorar o tour. Nas telas com barra lateral, a zona vazia entre o menu e o usuário (o menor
+ * espaço medido é 207 px de altura, em 1280x720 com o perfil de funcionário). Nas demais, o canto de baixo
+ * que cobre menos conteúdo. A escolha usa a medição real da página, não uma posição fixa.
+ */
+function chooseAnchor(dock: HTMLElement, current: Anchor): Anchor {
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const w = dock.offsetWidth
+  const h = dock.offsetHeight
+  const sidebar = document.querySelector('.ih-sidebar')?.getBoundingClientRect()
+  const footer = document.querySelector('.ih-sidebar-footer')?.getBoundingClientRect()
+  const landingFoot = document.querySelector('.ih-landing-foot')?.getBoundingClientRect()
+  const base = landingFoot ? Math.min(Math.max(vh - landingFoot.top + 8, 18), 120) : 18
 
-const FAQ: Array<{ test: RegExp; reply: string }> = [
-  { test: /(dado|ficticio|real|verdade|banco)/, reply: 'Todos os dados são fictícios e ficam só na sua aba. Fechou a aba, a demonstração recomeça do zero.' },
-  { test: /(senha|login|entrar|acesso|cadastro)/, reply: 'Não precisa de senha: cada botão de "Acessar como" entra direto em um perfil. Dá para sair pelo botão no menu e escolher outro.' },
-  { test: /(totem)/, reply: 'O Totem é a versão para tablets no chão de fábrica: login por matrícula, botões grandes e ideia por voz.' },
-  { test: /(gestor|triagem|score)/, reply: 'O gestor decide quanto pesa a nota da IA e quanto pesa a da comunidade, aprova ideias e acompanha as métricas do setor.' },
-  { test: /(admin|administrador|regra|configur)/, reply: 'O administrador gerencia usuários, cursos, moderação e as regras da plataforma, como quantos apoios uma ideia precisa.' },
-  { test: /(pont[ou]|nivel|ranking|premio|marketplace|recompensa)/, reply: 'Participar gera pontos (ideia publicada, validação, curso, mentoria). Os pontos sobem o nível e podem virar benefícios no Marketplace.' },
-  { test: /(eura|ia\b|inteligencia)/, reply: 'Eu sou a Eura, a IA do HUB. Na plataforma eu ajudo a estruturar a ideia, calculo o AI Score e filtro conteúdo inadequado. Nesta demonstração, respondo por regras simples.' },
-  { test: /(quem fez|projeto|fiap|eurofarma|autor)/, reply: 'É um projeto da FIAP Global Solution para o desafio da Eurofarma. Esta é a versão de portfolio, que roda inteira no navegador.' },
-]
+  type Cand = { a: Anchor; x: number; y: number; pref: number }
+  const cands: Cand[] = []
+  const add = (align: Anchor['align'], x: number, y: number, pref: number) => {
+    const cy = Math.min(Math.max(y, 12), Math.max(12, vh - h - 12))
+    cands.push({ a: { align, x, bottom: vh - cy - h }, x, y: cy, pref })
+  }
+  if (sidebar && footer && sidebar.width >= 200) {
+    add('left', sidebar.left + 12, footer.top - 10 - h, 0)
+  }
+  // Cantos e laterais da tela: o de baixo é o preferido; o meio e o topo servem de reserva
+  const bottomY = vh - base - h
+  const middleY = (vh - h) / 2
+  add('left', 18, bottomY, 1)
+  add('left', 18, middleY, 2)
+  add('left', 18, 72, 2.5)
+  add('right', vw - w - 18, bottomY, 2)
+  add('right', vw - w - 18, middleY, 3)
+  add('right', vw - w - 18, 72, 3.5)
+  add('center', (vw - w) / 2, bottomY, 3)
 
-const SUGGESTIONS = ['Os dados são reais?', 'Como funciona a pontuação?']
+  dock.style.pointerEvents = 'none' // o tour não pode "esconder" o que está sob ele na medição
+  const scored = cands.map((c) => ({ c, cost: coverage(c.x, c.y, w, h) * 8 + c.pref }))
+  dock.style.pointerEvents = ''
 
-function Typewriter({ text, onGrow, onDone }: { text: string; onGrow: () => void; onDone: () => void }) {
-  const [n, setN] = useState(0)
-  const grow = useRef(onGrow)
-  const done = useRef(onDone)
-  grow.current = onGrow
-  done.current = onDone
+  const best = scored.reduce((m, s) => (s.cost < m.cost ? s : m))
+  // Histerese: só muda de lugar se o novo for bem melhor, para o tour não ficar pulando
+  const stay = scored.find(
+    (s) => s.c.a.align === current.align && Math.abs(s.c.a.bottom - current.bottom) < 3 && (s.c.a.align !== 'left' || Math.abs(s.c.a.x - current.x) < 3)
+  )
+  if (stay && best.cost > stay.cost - 6) return stay.c.a
+  return best.c.a
+}
+
+/* ───────── peças visuais ───────── */
+
+/** Texto que a Eura "digita". O texto inteiro fica invisível por baixo para o cartão nunca mudar de altura. */
+function StepText({ text, animate }: { text: string; animate: boolean }) {
+  const [phase, setPhase] = useState<'typing' | 'text'>(animate ? 'typing' : 'text')
+  const [n, setN] = useState(animate ? 0 : text.length)
+
   useEffect(() => {
-    if (n >= text.length) {
-      done.current()
-      return
-    }
-    const t = setTimeout(() => {
-      setN((v) => Math.min(text.length, v + 2))
-      grow.current()
-    }, 12)
+    if (!animate) return
+    const t = setTimeout(() => setPhase('text'), 450)
     return () => clearTimeout(t)
-  }, [n, text])
-  return <>{text.slice(0, n)}</>
+  }, [animate])
+
+  useEffect(() => {
+    if (phase !== 'text' || n >= text.length) return
+    const t = setTimeout(() => setN((v) => Math.min(text.length, v + 2)), 12)
+    return () => clearTimeout(t)
+  }, [phase, n, text])
+
+  return (
+    <span className="tw">
+      <span className="tw-ghost">{text}</span>
+      <span className="tw-live">
+        {phase === 'typing' ? <span className="tour-typing"><span /><span /><span /></span> : text.slice(0, n)}
+      </span>
+    </span>
+  )
 }
 
 function EuraAvatar({ size = 30 }: { size?: number }) {
@@ -180,11 +220,9 @@ export default function TourProvider() {
   const [tour, setTour] = useState<TourState>(DEFAULT_STATE)
   const [nudge, setNudge] = useState<Nudge | null>(null)
   const [banner, setBanner] = useState<Banner | null>(null)
-  const [chat, setChat] = useState<ChatMsg[]>([])
-  const [typedId, setTypedId] = useState(0)
-  const [unread, setUnread] = useState(0)
-  const [dock, setDock] = useState<'right' | 'left'>('right')
-  const [draft, setDraft] = useState('')
+  const [anchor, setAnchor] = useState<Anchor>(DEFAULT_ANCHOR)
+  const [off, setOff] = useState(false)
+  const [animate, setAnimate] = useState(false)
 
   const tourRef = useRef(tour)
   const pathRef = useRef(pathname)
@@ -194,11 +232,8 @@ export default function TourProvider() {
   const prev = useRef<{ persona: PersonaId | null; path: string } | null>(null)
   const nudgeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const idRef = useRef(0)
-  const panelRef = useRef<HTMLDivElement>(null)
-  const bodyRef = useRef<HTMLDivElement>(null)
-  const barRef = useRef<HTMLDivElement>(null)
-  const dockRef = useRef<'right' | 'left'>('right')
+  const dockRef = useRef<HTMLDivElement>(null)
+  const anchorRef = useRef(DEFAULT_ANCHOR)
 
   const save = useCallback((next: TourState) => {
     tourRef.current = next
@@ -215,54 +250,12 @@ export default function TourProvider() {
     setNudge(null)
   }, [])
 
-  const scrollChat = useCallback(() => {
-    const el = bodyRef.current
-    if (el) el.scrollTop = el.scrollHeight
-  }, [])
-
-  /* ── mensagens ── */
-
-  const addMsg = useCallback((msg: Omit<ChatMsg, 'id'>) => {
-    const id = ++idRef.current
-    setChat((c) => [...c, { ...msg, id }].slice(-MAX_MESSAGES))
-    return id
-  }, [])
-
-  /** A Eura "digita" e então fala o passo. */
-  const say = useCallback(
-    (step: number, instant = false) => {
-      const st = STEPS[step]
-      const id = ++idRef.current
-      const content = { from: 'eura' as const, title: st.title, text: st.text }
-      if (instant) {
-        setChat((c) => [...c, { id, ...content }].slice(-MAX_MESSAGES))
-        setTypedId(id)
-        return
-      }
-      setChat((c) => [...c.filter((m) => !m.typing), { id, from: 'eura' as const, typing: true }].slice(-MAX_MESSAGES))
-      setTimeout(() => {
-        setChat((c) => c.map((m) => (m.id === id ? { id, ...content, fresh: true } : m)))
-        if (!tourRef.current.open) setUnread((n) => n + 1)
-      }, 650)
-    },
-    []
-  )
-
   useEffect(() => {
     const loaded = loadState()
     tourRef.current = loaded
     setTour(loaded)
     setReady(true)
-    if (loaded.on) say(loaded.i, true)
-  }, [say])
-
-  useEffect(() => {
-    scrollChat()
-  }, [chat, typedId, tour.open, tour.big, scrollChat])
-
-  useEffect(() => {
-    if (tour.open) setUnread(0)
-  }, [tour.open])
+  }, [])
 
   /* ── passos ── */
 
@@ -293,6 +286,7 @@ export default function TourProvider() {
       const run = ++runRef.current
       skipUntil.current = Date.now() + 3500
       const st = STEPS[i]
+      setAnimate(true)
       save({ ...tourRef.current, on: true, i, tip: false })
 
       const persona = currentPersona()
@@ -301,9 +295,7 @@ export default function TourProvider() {
         setBanner({ from: personaLabel(persona), to: personaLabel(st.persona) })
         if (bannerTimer.current) clearTimeout(bannerTimer.current)
         bannerTimer.current = setTimeout(() => setBanner(null), 3200)
-        addMsg({ from: 'sys', text: `Perfil: ${personaLabel(st.persona)}` })
       }
-      say(i)
 
       if (st.persona === null) {
         if (persona) {
@@ -330,7 +322,7 @@ export default function TourProvider() {
         if (runRef.current === run) void runDemo(st.run, run)
       }
     },
-    [addMsg, clearNudge, router, runDemo, save, say]
+    [clearNudge, router, runDemo, save]
   )
 
   const maybeNudge = useCallback(
@@ -341,17 +333,11 @@ export default function TourProvider() {
       if (step === null || step === undefined) return
 
       if (t.on) {
+        // Com o tour ligado, mexer em outra parte pausa o tour (cartão de pausa). Só segue sozinho se a pessoa
+        // clicou no que o passo sugeria.
         const cur = STEPS[t.i]
-        if (cur.persona === persona) {
-          if (kind === 'profile') return
-          if (cur.page === key || cur.also?.some((a) => a.page === key)) return
-          if (step === t.i) return
-          // clicou no que o passo sugeria: segue para o próximo sem perguntar
-          if (step === t.i + 1) {
-            void enterStep(step, { keepPath: true })
-            return
-          }
-        }
+        if (cur.persona === persona && kind === 'page' && step === t.i + 1) void enterStep(step, { keepPath: true })
+        return
       }
 
       const id = `${kind}:${persona}:${kind === 'page' ? key : ''}`
@@ -360,9 +346,9 @@ export default function TourProvider() {
       setNudge({ kind, step, path, label: kind === 'page' ? PAGE_LABEL[key] ?? key : ROLE_LABEL[persona] })
 
       requestAnimationFrame(() => {
-        const pill = document.querySelector('.tour-pill, .tour-bar')
-        pill?.classList.add('shake')
-        setTimeout(() => pill?.classList.remove('shake'), 1500)
+        const dock = document.querySelector('.tour-dock')
+        dock?.classList.add('shake')
+        setTimeout(() => dock?.classList.remove('shake'), 1500)
       })
       if (nudgeTimer.current) clearTimeout(nudgeTimer.current)
       nudgeTimer.current = setTimeout(() => setNudge(null), 15000)
@@ -390,10 +376,27 @@ export default function TourProvider() {
     else if (normalizePath(pathname) !== normalizePath(before.path)) maybeNudge('page', persona, key, pathname)
   }, [pathname, ready, enterStep, maybeNudge])
 
+  // Tour ligado, mas a pessoa foi para outra parte do site: pausa e oferece continuar de onde parou
+  useEffect(() => {
+    if (!ready || !tour.on) {
+      setOff(false)
+      return
+    }
+    const compute = () => {
+      const persona = currentPersona()
+      const key = pageKey(pathname)
+      const st = STEPS[tour.i]
+      const here = st.persona === persona && !!key && (key === st.page || !!st.also?.some((a) => a.page === key))
+      setOff(!here)
+    }
+    const timer = setTimeout(compute, Math.max(0, skipUntil.current - Date.now()) + 700)
+    return () => clearTimeout(timer)
+  }, [pathname, tour.on, tour.i, ready])
+
   // Destaque do elemento do passo; reaplicado porque o React recria os elementos da página
   useEffect(() => {
     const clearHighlight = () => document.querySelectorAll('.tour-hl').forEach((e) => e.classList.remove('tour-hl'))
-    if (!tour.on || nudge) {
+    if (!tour.on || nudge || off) {
       clearHighlight()
       return
     }
@@ -420,53 +423,29 @@ export default function TourProvider() {
       clearInterval(timer)
       clearHighlight()
     }
-  }, [tour.on, tour.i, nudge])
+  }, [tour.on, tour.i, nudge, off])
 
-  // O chat fica no canto (direito ou esquerdo) que cobre menos texto e botões e nunca o elemento mostrado
+  // Ancoragem: reavaliada de tempos em tempos e quando a tela muda de tamanho
   useEffect(() => {
-    if (!tour.on || !tour.open || nudge) return
+    if (!ready) return
     const choose = () => {
-      const panel = panelRef.current
-      if (!panel || window.innerWidth <= 640) return
-      const vw = window.innerWidth
-      const vh = window.innerHeight
-      const w = panel.offsetWidth
-      const h = panel.offsetHeight
-      const y = vh - h - 76
-      let tr: DOMRect | null = null
-      const sel = STEPS[tourRef.current.i].hl
-      if (sel) {
-        try {
-          tr = findTarget(sel)?.getBoundingClientRect() ?? null
-        } catch {
-          tr = null
-        }
-      }
-      const spots = { right: vw - w - 18, left: 18 }
-      panel.style.pointerEvents = 'none' // o chat não pode "esconder" o que está sob ele na medição
-      const cost = (side: 'right' | 'left') => {
-        const x = spots[side]
-        let c = coverage(x, y, w, h) * 8 + (side === 'left' ? 1 : 0)
-        if (tr && x < tr.right + 8 && x + w > tr.left - 8 && y < tr.bottom + 8 && y + h > tr.top - 8) c += 500
-        return c
-      }
-      const right = cost('right')
-      const left = cost('left')
-      panel.style.pointerEvents = ''
-      const next = dockRef.current === 'right' ? (left < right - 6 ? 'left' : 'right') : right < left - 6 ? 'right' : 'left'
-      if (next !== dockRef.current) {
-        dockRef.current = next
-        setDock(next)
+      const dock = dockRef.current
+      if (!dock || window.innerWidth <= 640) return
+      const next = chooseAnchor(dock, anchorRef.current)
+      const cur = anchorRef.current
+      if (next.align !== cur.align || Math.abs(next.x - cur.x) > 2 || Math.abs(next.bottom - cur.bottom) > 2) {
+        anchorRef.current = next
+        setAnchor(next)
       }
     }
     choose()
-    const timer = setInterval(choose, 900)
+    const timer = setInterval(choose, 800)
     window.addEventListener('resize', choose)
     return () => {
       clearInterval(timer)
       window.removeEventListener('resize', choose)
     }
-  }, [tour.on, tour.open, tour.big, tour.i, nudge])
+  }, [ready, tour.on, tour.min, tour.i, nudge, off, pathname])
 
   /* ── ações ── */
 
@@ -478,7 +457,7 @@ export default function TourProvider() {
       save({ ...t, on: false, tip: false })
       return
     }
-    save({ ...t, tip: false, open: true })
+    save({ ...t, tip: false, min: false })
     // Quem já estava explorando começa pelo trecho em que está; senão, retoma de onde parou
     const persona = currentPersona()
     const key = pageKey(pathRef.current)
@@ -486,15 +465,8 @@ export default function TourProvider() {
     void enterStep(here ?? t.i, { keepPath: here !== null && here !== undefined })
   }
 
-  async function next(label = 'Próximo') {
+  async function next() {
     const i = tourRef.current.i
-    if (i >= STEPS.length - 1) {
-      runRef.current++
-      save({ ...tourRef.current, on: false, i: 0 })
-      setChat([])
-      return
-    }
-    addMsg({ from: 'user', text: label })
     if (i === 1) {
       const button = document.querySelector<HTMLElement>('[data-role="funcionario"]')
       if (button) {
@@ -508,20 +480,22 @@ export default function TourProvider() {
       }
     }
     if (i === 8) await approveDemoIdea()
+    if (i >= STEPS.length - 1) {
+      runRef.current++
+      save({ ...tourRef.current, on: false, i: 0 })
+      return
+    }
     void enterStep(i + 1)
   }
 
-  function previous(label = 'Voltar') {
+  function previous() {
     const i = tourRef.current.i
-    if (i <= 0) return
-    addMsg({ from: 'user', text: label })
-    void enterStep(i - 1)
+    if (i > 0) void enterStep(i - 1)
   }
 
   function restart() {
     resetDemo()
     clearUserCache()
-    setChat([])
     save({ ...DEFAULT_STATE, on: true, tip: false })
     void enterStep(0)
   }
@@ -532,7 +506,6 @@ export default function TourProvider() {
     clearNudge()
     const st = STEPS[n.step]
     const keepPath = n.kind === 'page' && st.persona === currentPersona() && !st.run
-    addMsg({ from: 'user', text: 'Sim, mostrar' })
     void enterStep(n.step, { keepPath })
   }
 
@@ -541,33 +514,9 @@ export default function TourProvider() {
     save({ ...tourRef.current, dismissals: tourRef.current.dismissals + 1 })
   }
 
-  function go(path: string, label: string) {
+  function go(path: string) {
     skipUntil.current = Date.now() + 2500
-    addMsg({ from: 'user', text: label })
     router.push(path)
-  }
-
-  function ask(raw: string) {
-    const text = raw.trim()
-    if (!text) return
-    const t = plain(text)
-    if (/(proxim|continu|avanc|seguir|vamos)/.test(t)) return void next(text)
-    if (/(^|\s)(volt|anterior|repet)/.test(t)) return void previous(text)
-    addMsg({ from: 'user', text })
-    if (/(sair|parar|encerr|desligar|fechar)/.test(t)) {
-      addMsg({ from: 'eura', text: 'Tudo bem! Desliguei o tour. Para voltar, use o botão no canto da tela.' })
-      runRef.current++
-      save({ ...tourRef.current, on: false, tip: false })
-      return
-    }
-    const hit = FAQ.find((f) => f.test.test(t))
-    const reply = hit?.reply ?? 'Não entendi bem. Posso falar sobre os dados, os perfis, a pontuação ou o Totem, ou seguir o tour com o botão Próximo.'
-    const id = ++idRef.current
-    setChat((c) => [...c, { id, from: 'eura' as const, typing: true }].slice(-MAX_MESSAGES))
-    setTimeout(() => {
-      setChat((c) => c.map((m) => (m.id === id ? { id, from: 'eura' as const, text: reply, fresh: true } : m)))
-      if (!tourRef.current.open) setUnread((n) => n + 1)
-    }, 600)
   }
 
   if (!ready) return null
@@ -575,9 +524,161 @@ export default function TourProvider() {
   const st = STEPS[tour.i]
   const remaining = STEPS.slice(tour.i).reduce((a, s) => a + s.sec, 0)
   const last = tour.i === STEPS.length - 1
-  // Os atalhos do passo (Ver também, Recomeçar) ficam só na mensagem do passo atual, não nas respostas de dúvida
-  const lastStep = [...chat].reverse().find((m) => m.from === 'eura' && m.title && !m.typing)
-  const showChoices = !!lastStep && (lastStep.fresh ? typedId === lastStep.id : true)
+  const persona = currentPersona()
+  const key = pageKey(pathname)
+
+  // Na pausa, o que a Eura oferece para a parte do site em que a pessoa está
+  const here = persona ? (persona !== st.persona ? PROFILE_STEP[persona] : key ? PAGE_STEP[persona]?.[key] : null) : null
+  const pausedOffer = here !== null && here !== undefined && here !== tour.i ? here : null
+
+  const style: React.CSSProperties = {
+    bottom: anchor.bottom,
+    ...(anchor.align === 'left' ? { left: anchor.x } : anchor.align === 'right' ? { right: 18 } : { left: '50%', transform: 'translateX(-50%)' }),
+  }
+
+  const head = (title: string, withPersona: boolean) => (
+    <div className="tour-card-head">
+      <EuraAvatar size={28} />
+      <div className="who">
+        <b>Eura</b>
+        <small>
+          {withPersona ? (
+            <span className="tour-persona" data-p={st.persona ?? 'none'}>
+              <i /> {personaLabel(st.persona)}
+            </span>
+          ) : (
+            title
+          )}
+        </small>
+      </div>
+    </div>
+  )
+
+  let body: React.ReactNode
+  let mode: string
+  if (nudge) {
+    mode = 'invite'
+    body = (
+      <div className="tour-card">
+        {head('Convite', false)}
+        <p className="tour-text">
+          {nudge.kind === 'page' ? (
+            <>Você está em <b>{nudge.label}</b>. Quer que eu te mostre esta aba?</>
+          ) : (
+            <>Você entrou como <b>{nudge.label}</b>. Quer que eu te mostre este perfil?</>
+          )}
+        </p>
+        <div className="tour-actions">
+          <button type="button" className="primary" onClick={acceptNudge}>Sim, mostrar</button>
+          <button type="button" onClick={declineNudge}>Agora não</button>
+        </div>
+      </div>
+    )
+  } else if (tour.on && off) {
+    mode = 'paused'
+    body = (
+      <div className="tour-card">
+        {head('Tour em pausa', false)}
+        <p className="tour-text">
+          Pausei no passo <b>{tour.i + 1} de {STEPS.length}</b>, &quot;{st.title}&quot;, porque você foi para outra parte do site.
+        </p>
+        <div className="tour-actions stack">
+          <button type="button" className="primary" onClick={() => void enterStep(tour.i)}>Continuar de onde parei</button>
+          {pausedOffer !== null && (
+            <button
+              type="button"
+              onClick={() => {
+                const target = STEPS[pausedOffer]
+                void enterStep(pausedOffer, { keepPath: target.persona === persona && !target.run })
+              }}
+            >
+              {persona !== st.persona ? 'Mostrar este perfil' : 'Mostrar esta aba'}
+            </button>
+          )}
+          <button type="button" className="ghost" onClick={toggle}>Sair do tour</button>
+        </div>
+      </div>
+    )
+  } else if (tour.on && tour.min) {
+    mode = 'min'
+    body = (
+      <div className="tour-bar">
+        <button type="button" className="tour-bar-eura" aria-label="Abrir o texto da Eura" title="Abrir o texto da Eura" onClick={() => save({ ...tour, min: false })}>
+          <EuraAvatar size={26} />
+        </button>
+        <span className="tour-bar-info">{tour.i + 1}/{STEPS.length}</span>
+        <button type="button" className="tour-nav" onClick={previous} disabled={tour.i === 0}>Voltar</button>
+        <button type="button" className="tour-nav primary" onClick={() => void next()}>
+          {last ? 'Concluir' : 'Próximo'} <Icon name="chevron-right" size={14} />
+        </button>
+      </div>
+    )
+  } else if (tour.on) {
+    mode = 'step'
+    body = (
+      <div className="tour-card" style={{ ['--p' as string]: (tour.i + 1) / STEPS.length }}>
+        <div className="tour-progress"><i /></div>
+        <div className="tour-card-top">
+          {head(st.title, true)}
+          <span className="tour-ctl">
+            <button type="button" aria-label="Recolher o texto" title="Recolher o texto" onClick={() => save({ ...tour, min: true })}>
+              <Icon name="minus" size={13} />
+            </button>
+            <button type="button" aria-label="Desligar o tour" title="Desligar o tour" onClick={toggle}>
+              <Icon name="x" size={13} />
+            </button>
+          </span>
+        </div>
+        <p className="tour-text">
+          <StepText key={tour.i} text={st.text} animate={animate} />
+        </p>
+        {(st.also || st.restart) && (
+          <div className="tour-chips">
+            {st.also?.map((a) => (
+              <button key={a.path} type="button" onClick={() => go(a.path)}>{a.label}</button>
+            ))}
+            {st.restart && <button type="button" onClick={restart}>Recomeçar o tour</button>}
+          </div>
+        )}
+        <div className="tour-card-foot">
+          <span className="tour-count">{tour.i + 1}/{STEPS.length} <small>{minLabel(remaining)}</small></span>
+          <button type="button" className="tour-nav" onClick={previous} disabled={tour.i === 0}>Voltar</button>
+          <button type="button" className="tour-nav primary" onClick={() => void next()}>
+            {last ? 'Concluir' : 'Próximo'} <Icon name="chevron-right" size={14} />
+          </button>
+        </div>
+      </div>
+    )
+  } else {
+    mode = 'off'
+    body = (
+      <>
+        {tour.tip && (
+          <div className="tour-tip" role="status">
+            A Eura te mostra a história do projeto em {minLabel(TOTAL_SEC)}
+            <button type="button" aria-label="Dispensar" onClick={() => save({ ...tour, tip: false })}>
+              <Icon name="x" size={12} />
+            </button>
+          </div>
+        )}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={false}
+          className={`tour-pill${tour.tip ? ' pulse' : ''}`}
+          title={tour.i > 0 ? 'Continuar o tour de onde parou' : 'Ativar o tour guiado'}
+          onClick={toggle}
+        >
+          <Icon name="sparkles" size={15} />
+          <span>
+            {tour.i > 0 ? 'Continuar o tour' : 'Fazer o tour'}{' '}
+            <small>{tour.i > 0 ? `${tour.i + 1}/${STEPS.length}` : minLabel(TOTAL_SEC)}</small>
+          </span>
+          <span className="tour-sw" />
+        </button>
+      </>
+    )
+  }
 
   return (
     <>
@@ -590,159 +691,9 @@ export default function TourProvider() {
           <b>{banner.to}</b>
         </div>
       )}
-
-      {nudge ? (
-        <div className="tour-nudge" role="alertdialog" aria-label="Convite da Eura para o tour">
-          <div className="tour-nudge-head">
-            <EuraAvatar size={24} />
-            <b>Eura</b>
-          </div>
-          <p>
-            {nudge.kind === 'page' ? (
-              <>Você está em <b>{nudge.label}</b>. Quer que eu te mostre esta aba?</>
-            ) : (
-              <>Você entrou como <b>{nudge.label}</b>. Quer que eu te mostre este perfil?</>
-            )}
-          </p>
-          <div className="tour-nudge-btns">
-            <button type="button" className="primary" onClick={acceptNudge}>Sim, mostrar</button>
-            <button type="button" onClick={declineNudge}>Agora não</button>
-          </div>
-        </div>
-      ) : tour.on && tour.open ? (
-        <div
-          ref={panelRef}
-          className={`tour-chat${tour.big ? ' big' : ''}${dock === 'left' ? ' left' : ''}`}
-          role="dialog"
-          aria-label="Chat da Eura, guia do tour"
-        >
-          <div className="tour-chat-head">
-            <EuraAvatar size={34} />
-            <div className="who">
-              <b>Eura</b>
-              <small>
-                <span className="tour-persona" data-p={st.persona ?? 'none'}>
-                  <i /> Perfil: {personaLabel(st.persona)}
-                </span>
-              </small>
-            </div>
-            <button type="button" aria-label={tour.big ? 'Reduzir o chat' : 'Maximizar o chat'} title={tour.big ? 'Reduzir' : 'Maximizar'} onClick={() => save({ ...tour, big: !tour.big })}>
-              <Icon name={tour.big ? 'minimize' : 'maximize'} size={14} />
-            </button>
-            <button type="button" aria-label="Minimizar o chat" title="Minimizar" onClick={() => save({ ...tour, open: false })}>
-              <Icon name="minus" size={14} />
-            </button>
-          </div>
-
-          <div ref={bodyRef} className="tour-chat-body">
-            {chat.map((m) => {
-              if (m.from === 'sys') return <div key={m.id} className="tour-sys">{m.text}</div>
-              if (m.from === 'user') {
-                return (
-                  <div key={m.id} className="tour-msg user">
-                    <div className="tour-bub">{m.text}</div>
-                  </div>
-                )
-              }
-              return (
-                <div key={m.id} className="tour-msg">
-                  <EuraAvatar size={26} />
-                  <div className="tour-bub">
-                    {m.typing ? (
-                      <span className="tour-typing"><span /><span /><span /></span>
-                    ) : (
-                      <>
-                        {m.title && <h4>{m.title}</h4>}
-                        {m.fresh && typedId !== m.id ? (
-                          <Typewriter text={m.text ?? ''} onGrow={scrollChat} onDone={() => setTypedId(m.id)} />
-                        ) : (
-                          m.text
-                        )}
-                      </>
-                    )}
-                    {showChoices && lastStep?.id === m.id && (st.also || st.restart) && (
-                      <div className="tour-chips">
-                        {st.also?.map((a) => (
-                          <button key={a.path} type="button" onClick={() => go(a.path, `Ver ${a.label}`)}>{a.label}</button>
-                        ))}
-                        {st.restart && <button type="button" onClick={restart}>Recomeçar o tour</button>}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="tour-suggest">
-            {SUGGESTIONS.map((s) => (
-              <button key={s} type="button" onClick={() => ask(s)}>{s}</button>
-            ))}
-          </div>
-          <form
-            className="tour-chat-foot"
-            onSubmit={(e) => {
-              e.preventDefault()
-              ask(draft)
-              setDraft('')
-            }}
-          >
-            <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Pergunte algo à Eura..." aria-label="Mensagem para a Eura" />
-            <button type="submit" aria-label="Enviar">
-              <Icon name="send" size={14} />
-            </button>
-          </form>
-        </div>
-      ) : tour.tip ? (
-        <div className="tour-tip" role="status">
-          A Eura te mostra a história do projeto em {minLabel(TOTAL_SEC)}
-          <button type="button" aria-label="Dispensar" onClick={() => save({ ...tour, tip: false })}>
-            <Icon name="x" size={12} />
-          </button>
-        </div>
-      ) : null}
-
-      {tour.on ? (
-        <div ref={barRef} className="tour-bar" role="group" aria-label="Controles do tour" style={{ ['--p' as string]: (tour.i + 1) / STEPS.length }}>
-          <button
-            type="button"
-            className="tour-bar-eura"
-            aria-label={tour.open ? 'Minimizar o chat da Eura' : 'Abrir o chat da Eura'}
-            title={tour.open ? 'Minimizar o chat' : 'Abrir o chat da Eura'}
-            onClick={() => save({ ...tour, open: !tour.open })}
-          >
-            <EuraAvatar size={28} />
-            {unread > 0 && !tour.open && <i className="tour-dot" />}
-          </button>
-          <span className="tour-bar-info">
-            {tour.i + 1}/{STEPS.length} <small>{minLabel(remaining)}</small>
-          </span>
-          <button type="button" className="tour-nav" onClick={() => previous()} disabled={tour.i === 0}>
-            Voltar
-          </button>
-          <button type="button" className="tour-nav primary" onClick={() => void next(last ? 'Concluir' : 'Próximo')}>
-            {last ? 'Concluir' : 'Próximo'} <Icon name="chevron-right" size={14} />
-          </button>
-          <button type="button" role="switch" aria-checked="true" aria-label="Desligar o tour" className="tour-switch-btn" onClick={toggle}>
-            <span className="tour-sw" />
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          role="switch"
-          aria-checked={false}
-          className={`tour-pill${tour.tip && !nudge ? ' pulse' : ''}`}
-          title="Ativar o tour guiado"
-          onClick={toggle}
-        >
-          <Icon name="sparkles" size={15} />
-          <span>
-            Fazer o tour <small>{minLabel(TOTAL_SEC)}</small>
-          </span>
-          <span className="tour-sw" />
-        </button>
-      )}
+      <div ref={dockRef} className="tour-dock" data-mode={mode} style={style} role="region" aria-label="Guia do tour">
+        {body}
+      </div>
     </>
   )
 }

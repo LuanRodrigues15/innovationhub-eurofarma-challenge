@@ -945,7 +945,7 @@ export default function HubFuncionarioPage() {
           aria-label="Nova ideia"
           onClick={() => router.push('/ia-innovation')}
           style={{
-            position: 'fixed', bottom: 76, right: 28,
+            position: 'fixed', bottom: 28, right: 28,
             height: 52, borderRadius: 100,
             padding: '0 22px 0 18px',
             background: isDark ? '#FFC600' : BLUE,

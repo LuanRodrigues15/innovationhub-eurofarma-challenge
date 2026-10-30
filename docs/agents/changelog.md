@@ -1,5 +1,16 @@
 # Changelog de agentes
 
+## Tour em cartão compacto na barra lateral
+
+- Estudo de encaixe: a barra lateral do app tem sempre 260 px e uma zona vazia entre o menu e o usuário, de 207 a
+  646 px de altura em 800x600 a 1920x1080 nos três perfis (menor valor: funcionário a 1280x720). O cartão da Eura
+  (236 px) mora ali e cobre 0 de 35 pontos de conteúdo nas telas com barra lateral.
+- Telas sem barra lateral (inicial e Totem): escolhe entre cantos e laterais pelo que cobre menos (0 a 7 de 35).
+- Voltar e Próximo ficam dentro do cartão; texto com "digitando" e altura fixa, então os botões não se mexem.
+- Tour pausa quando a pessoa mexe em outra parte: cartão com "Continuar de onde parei", "Mostrar esta aba ou
+  perfil" e "Sair". O botão do tour desligado vira "Continuar o tour 3/14".
+- Removidos o chat com histórico, o campo de perguntas e o maximizar; o botão "Nova ideia" do Hub voltou ao lugar.
+
 ## Tour contado pela Eura em um chat
 
 - O tour virou uma conversa: a Eura fala em primeira pessoa, cada passo é uma mensagem (com "digitando" e efeito de
