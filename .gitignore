@@ -47,8 +47,6 @@ credentials*.json
 *service-account*.json
 serviceAccountKey.json
 
-# local documentation not published to GitHub
-/docs/
 
 # local SQL dumps / database scripts not published to GitHub
 *.sql
