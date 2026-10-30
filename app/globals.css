@@ -10650,7 +10650,10 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   animation: fadeUp 0.3s ease both;
 }
 .tour-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
-.tour-top > button {
+.tour-top { cursor: grab; touch-action: none; user-select: none; }
+.tour-top:active { cursor: grabbing; }
+.tour-ctl { display: flex; gap: 2px; }
+.tour-ctl button {
   width: 20px;
   height: 20px;
   display: inline-flex;
@@ -10659,7 +10662,7 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   border-radius: 6px;
   color: rgba(255, 255, 255, 0.55);
 }
-.tour-top > button:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.tour-ctl button:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
 .tour-persona {
   display: inline-flex;
   align-items: center;
@@ -10752,3 +10755,8 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   .tour-nudge { right: 12px; bottom: 62px; }
   .tour-tip { right: 12px; bottom: 58px; }
 }
+
+/* Linha pontilhada do balão até o elemento mostrado, quando os dois não se tocam */
+.tour-link { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 9997; pointer-events: none; overflow: visible; }
+.tour-link line { stroke: #FFC600; stroke-width: 1.2; stroke-dasharray: 3 5; stroke-opacity: 0.65; opacity: 0; transition: opacity 0.2s; }
+.tour-link circle { fill: #FFC600; opacity: 0; transition: opacity 0.2s; }

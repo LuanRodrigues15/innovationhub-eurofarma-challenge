@@ -1,5 +1,14 @@
 # Changelog de agentes
 
+## Balão do tour fora do caminho
+
+- O balão escolhe o lugar que cobre menos conteúdo: avalia candidatos colados no elemento, a algumas distâncias e
+  na grade da tela, conta quantos pontos de texto, botão ou ícone cada um cobriria (elementFromPoint) e fica com o
+  de menor custo, com histerese para não pular. Medido: 0 a 2 de 35 pontos cobertos na maioria dos passos.
+- Linha pontilhada liga o balão ao elemento quando os dois não se tocam.
+- Balão arrastável pelo topo, com a posição guardada; duplo clique ou botão volta ao automático.
+- README conciso, com aviso de versão de portfolio no topo e só 6 prints.
+
 ## Ajustes do tour, mais ideias e README com prints
 
 - Tour: controles (Voltar, Próximo e interruptor) fixos no canto; o balão de texto se move até o elemento

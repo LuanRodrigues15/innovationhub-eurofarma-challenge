@@ -34,11 +34,13 @@ type TourState = {
   tip: boolean
   nudged: Record<string, true>
   dismissals: number
+  /** Posição escolhida arrastando o balão; null = automática. */
+  pos: { x: number; y: number } | null
 }
 type Nudge = { kind: 'page' | 'profile'; step: number; path: string; label: string }
 type Banner = { from: string; to: string }
 
-const DEFAULT_STATE: TourState = { on: false, i: 0, min: false, tip: true, nudged: {}, dismissals: 0 }
+const DEFAULT_STATE: TourState = { on: false, i: 0, min: false, tip: true, nudged: {}, dismissals: 0, pos: null }
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const minLabel = (s: number) => (s >= 60 ? `~${Math.round(s / 60)} min` : `${s}s`)
@@ -103,63 +105,160 @@ async function approveDemoIdea() {
 
 const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max)
 
-/** Posiciona o balão ao lado do elemento mostrado, sem cobri-lo nem a barra de controles. */
-function placeBubble(bubble: HTMLElement, bar: HTMLElement, target: Element | null) {
+type Cand = { x: number; y: number; near: boolean; pref: number }
+type PlaceCtx = { sig: string; t: number }
+
+const OVERLAY_UI = '.tour-bar,.tour-nudge,.tour-tip,.tour-switch'
+const INTERACTIVE = 'button,a,[role="button"],input,textarea,select,label'
+
+/** O ponto da tela tem algo que o balão esconderia: texto, botão, campo, ícone ou imagem. */
+function isContent(el: Element | null): boolean {
+  if (!el || el.closest(OVERLAY_UI)) return false
+  if (el.closest(INTERACTIVE) || el instanceof SVGElement || el instanceof HTMLImageElement) return true
+  return Array.from(el.childNodes).some((n) => n.nodeType === 3 && (n.textContent ?? '').trim() !== '')
+}
+
+/** Quantos pontos de uma grade 7x5 sobre o retângulo caem em conteúdo da página. */
+function coverage(x: number, y: number, w: number, h: number): number {
+  let hits = 0
+  for (let i = 0; i < 7; i++) {
+    for (let j = 0; j < 5; j++) {
+      if (isContent(document.elementFromPoint(x + ((i + 0.5) * w) / 7, y + ((j + 0.5) * h) / 5))) hits++
+    }
+  }
+  return hits
+}
+
+type Box = { left: number; top: number; right: number; bottom: number }
+const hits = (a: Box, b: Box, pad = 0) =>
+  a.left < b.right + pad && a.right > b.left - pad && a.top < b.bottom + pad && a.bottom > b.top - pad
+
+/** Lado do elemento em que o balão está encostado (para a setinha), ou none. */
+function sideOf(x: number, y: number, w: number, h: number, r: DOMRect | null) {
+  const G = 14
+  const tol = 8
+  if (!r) return { side: 'none', arrow: 0 }
+  const overlapY = y < r.bottom && y + h > r.top
+  const overlapX = x < r.right && x + w > r.left
+  if (overlapY && Math.abs(x - (r.right + G)) <= tol) return { side: 'right', arrow: clamp(r.top + r.height / 2 - y, 20, h - 20) }
+  if (overlapY && Math.abs(x + w - (r.left - G)) <= tol) return { side: 'left', arrow: clamp(r.top + r.height / 2 - y, 20, h - 20) }
+  if (overlapX && Math.abs(y - (r.bottom + G)) <= tol) return { side: 'bottom', arrow: clamp(r.left + r.width / 2 - x, 20, w - 20) }
+  if (overlapX && Math.abs(y + h - (r.top - G)) <= tol) return { side: 'top', arrow: clamp(r.left + r.width / 2 - x, 20, w - 20) }
+  return { side: 'none', arrow: 0 }
+}
+
+function candidatesFor(vw: number, vh: number, w: number, h: number, r: DOMRect | null, barRect: DOMRect): Cand[] {
+  const M = 12
+  const G = 14
+  const out: Cand[] = []
+  const fit = (x: number, y: number) => x >= M && x + w <= vw - M && y >= M && y + h <= vh - M
+
+  if (r) {
+    // Colado no elemento (com setinha) e também a algumas distâncias, para achar um espaço vazio perto
+    for (const gap of [G, 120, 240]) {
+      const adjacent = gap === G
+      for (const dy of [-h / 2 + r.height / 2, -16, r.height - h + 16]) {
+        const y = clamp(r.top + dy, M, vh - h - M)
+        if (fit(r.right + gap, y)) out.push({ x: r.right + gap, y, near: adjacent, pref: adjacent ? 0 : 1 })
+        if (fit(r.left - gap - w, y)) out.push({ x: r.left - gap - w, y, near: adjacent, pref: adjacent ? 0 : 1 })
+      }
+      for (const dx of [-w / 2 + r.width / 2, -16, r.width - w + 16]) {
+        const x = clamp(r.left + dx, M, vw - w - M)
+        if (fit(x, r.bottom + gap)) out.push({ x, y: r.bottom + gap, near: adjacent, pref: adjacent ? 0.5 : 1.5 })
+        if (fit(x, r.top - gap - h)) out.push({ x, y: r.top - gap - h, near: adjacent, pref: adjacent ? 0.5 : 1.5 })
+      }
+    }
+  }
+
+  // Grade geral pela tela: a ponta de baixo à direita (acima da barra) é o lugar de repouso
+  const room = Math.max(0, barRect.top - h - 10 - M)
+  for (const fx of [0, 0.5, 1]) {
+    for (const fy of [0, 0.5, 1]) {
+      const dock = fx === 1 && fy === 1
+      out.push({ x: M + fx * (vw - w - 2 * M), y: dock ? barRect.top - h - 10 : M + fy * room, near: false, pref: r ? 3 : dock ? 0 : 2 })
+    }
+  }
+  return out
+}
+
+/**
+ * Posiciona o balão no lugar que cobre menos conteúdo da página, de preferência ao lado do elemento
+ * mostrado. Não cobre o elemento nem a barra de controles. Uma posição arrastada pela pessoa vale
+ * mais que a automática.
+ */
+function placeBubble(
+  bubble: HTMLElement,
+  bar: HTMLElement,
+  target: Element | null,
+  manual: { x: number; y: number } | null,
+  ctx: PlaceCtx,
+  step: number,
+  minimized: boolean
+) {
   const vw = window.innerWidth
   const vh = window.innerHeight
   const w = bubble.offsetWidth
   const h = bubble.offsetHeight
-  const M = 12
-  const G = 14
   const barRect = bar.getBoundingClientRect()
 
-  let left = vw - w - 16
-  let top = barRect.top - h - 10
-  let side = 'none'
-  let arrow = 0
+  let tr: DOMRect | null = target?.getBoundingClientRect() ?? null
+  if (tr && !(tr.width > 0 && tr.height > 0 && tr.bottom > 0 && tr.top < vh && tr.right > 0 && tr.left < vw)) tr = null
 
-  const r = target?.getBoundingClientRect()
-  if (target && r && r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < vh && r.right > 0 && r.left < vw) {
-    // Prefere o lado do elemento (não cobre o conteúdo abaixo dele); acima e abaixo ficam de reserva
-    const bySpace = (a: { space: number }, b: { space: number }) => b.space - a.space
-    const sides = [
-      ...[
-        { s: 'right', space: vw - r.right },
-        { s: 'left', space: r.left },
-      ].sort(bySpace),
-      ...[
-        { s: 'bottom', space: vh - r.bottom },
-        { s: 'top', space: r.top },
-      ].sort(bySpace),
-    ]
+  let x: number
+  let y: number
+  if (manual) {
+    x = clamp(manual.x, 8, Math.max(8, vw - w - 8))
+    y = clamp(manual.y, 8, Math.max(8, vh - h - 8))
+  } else {
+    const sig = `${step}|${minimized}|${vw}x${vh}|${tr ? [tr.left, tr.top, tr.width, tr.height].map(Math.round).join(',') : 'none'}`
+    const now = performance.now()
+    // Reavalia só quando algo mudou ou de tempos em tempos (a página muda com as demos)
+    if (ctx.sig === sig && now - ctx.t < 1500 && bubble.classList.contains('placed')) return
+    ctx.sig = sig
+    ctx.t = now
 
-    for (const { s } of sides) {
-      let x: number
-      let y: number
-      if (s === 'right') { x = r.right + G; y = clamp(r.top + r.height / 2 - h / 2, M, vh - h - M) }
-      else if (s === 'left') { x = r.left - G - w; y = clamp(r.top + r.height / 2 - h / 2, M, vh - h - M) }
-      else if (s === 'bottom') { x = clamp(r.left + r.width / 2 - w / 2, M, vw - w - M); y = r.bottom + G }
-      else { x = clamp(r.left + r.width / 2 - w / 2, M, vw - w - M); y = r.top - G - h }
-
-      if (x < M || x + w > vw - M || y < M || y + h > vh - M) continue
-      const hitsBar = x < barRect.right && x + w > barRect.left && y < barRect.bottom && y + h > barRect.top
-      if (hitsBar) continue
-
-      left = x
-      top = y
-      side = s
-      arrow = s === 'right' || s === 'left'
-        ? clamp(r.top + r.height / 2 - y, 20, h - 20)
-        : clamp(r.left + r.width / 2 - x, 20, w - 20)
-      break
+    const tBox: Box | null = tr ? { left: tr.left, top: tr.top, right: tr.right, bottom: tr.bottom } : null
+    const barBox: Box = { left: barRect.left, top: barRect.top, right: barRect.right, bottom: barRect.bottom }
+    const ok = (cx: number, cy: number) => {
+      const box = { left: cx, top: cy, right: cx + w, bottom: cy + h }
+      return !(tBox && hits(box, tBox, 8)) && !hits(box, barBox, 6)
     }
+    const cost = (c: Cand) => {
+      const cover = coverage(c.x, c.y, w, h)
+      const dist = tr ? Math.hypot(c.x + w / 2 - (tr.left + tr.width / 2), c.y + h / 2 - (tr.top + tr.height / 2)) : 0
+      // Cobrir conteúdo pesa mais; ficar longe do elemento também, para a linha de ligação não ficar enorme
+      return cover * 8 + c.pref + dist / (c.near ? 90 : 60) + Math.max(0, dist - 350) / 25
+    }
+
+    bubble.style.pointerEvents = 'none' // o balão não pode "esconder" o que está sob ele na medição
+    let best: { c: Cand; cost: number } | null = null
+    for (const c of candidatesFor(vw, vh, w, h, tr, barRect)) {
+      if (!ok(c.x, c.y)) continue
+      const value = cost(c)
+      if (!best || value < best.cost) best = { c, cost: value }
+    }
+
+    // Histerese: só sai do lugar atual se o novo for bem melhor, para o balão não ficar pulando
+    const curX = parseFloat(bubble.style.left)
+    const curY = parseFloat(bubble.style.top)
+    if (best && bubble.classList.contains('placed') && Number.isFinite(curX) && Number.isFinite(curY) && ok(curX, curY)) {
+      const adjacent = sideOf(curX, curY, w, h, tr).side !== 'none'
+      const current = cost({ x: curX, y: curY, near: adjacent, pref: adjacent ? 0 : tr ? 3 : 0 })
+      if (best.cost > current - 6) best = { c: { x: curX, y: curY, near: adjacent, pref: 0 }, cost: current }
+    }
+    bubble.style.pointerEvents = ''
+
+    x = best ? best.c.x : vw - w - 16
+    y = best ? best.c.y : barRect.top - h - 10
   }
+
+  const { side, arrow } = manual ? { side: 'none', arrow: 0 } : sideOf(x, y, w, h, tr)
 
   // A primeira colocação é instantânea; só os movimentos seguintes (de um passo ao outro) animam
   const first = !bubble.classList.contains('placed')
   if (first) bubble.style.transition = 'none'
-  bubble.style.left = `${Math.round(left)}px`
-  bubble.style.top = `${Math.round(top)}px`
+  bubble.style.left = `${Math.round(x)}px`
+  bubble.style.top = `${Math.round(y)}px`
   bubble.dataset.side = side
   bubble.style.setProperty('--arrow', `${Math.round(arrow)}px`)
   if (first) {
@@ -188,6 +287,10 @@ export default function TourProvider() {
   const nudgeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bubbleRef = useRef<HTMLDivElement>(null)
+  const dragging = useRef(false)
+  const targetEl = useRef<Element | null>(null)
+  const linkRef = useRef<SVGLineElement>(null)
+  const dotRef = useRef<SVGCircleElement>(null)
   const barRef = useRef<HTMLDivElement>(null)
 
   const save = useCallback((next: TourState) => {
@@ -342,6 +445,7 @@ export default function TourProvider() {
       return
     }
     let scrolledFor = -1
+    const ctx: PlaceCtx = { sig: '', t: 0 }
     const tick = () => {
       clearHighlight()
       let target: Element | null = null
@@ -354,11 +458,14 @@ export default function TourProvider() {
         }
       }
       target?.classList.add('tour-hl')
+      targetEl.current = target
       if (target && scrolledFor !== tour.i) {
         scrolledFor = tour.i
         target.scrollIntoView({ block: 'center', behavior: 'smooth' })
       }
-      if (bubbleRef.current && barRef.current) placeBubble(bubbleRef.current, barRef.current, target)
+      if (bubbleRef.current && barRef.current && !dragging.current) {
+        placeBubble(bubbleRef.current, barRef.current, target, tourRef.current.pos, ctx, tour.i, tour.min)
+      }
     }
     tick()
     const timer = setInterval(tick, 250)
@@ -369,6 +476,38 @@ export default function TourProvider() {
       clearHighlight()
     }
   }, [tour.on, tour.i, tour.min, nudge])
+
+  // Quando o balão fica longe do elemento (para não cobrir a página), uma linha pontilhada liga os dois
+  useEffect(() => {
+    if (!tour.on || nudge) return
+    let raf = 0
+    const frame = () => {
+      const line = linkRef.current
+      const dot = dotRef.current
+      const bubble = bubbleRef.current
+      const target = targetEl.current
+      if (line && dot) {
+        const t = target?.getBoundingClientRect()
+        const show = !!(bubble && t && t.width > 0 && t.height > 0 && bubble.dataset.side === 'none' && bubble.classList.contains('placed'))
+        if (show && bubble && t) {
+          const b = bubble.getBoundingClientRect()
+          const p1 = { x: clamp(t.left + t.width / 2, b.left, b.right), y: clamp(t.top + t.height / 2, b.top, b.bottom) }
+          const p2 = { x: clamp(p1.x, t.left, t.right), y: clamp(p1.y, t.top, t.bottom) }
+          line.setAttribute('x1', String(p1.x))
+          line.setAttribute('y1', String(p1.y))
+          line.setAttribute('x2', String(p2.x))
+          line.setAttribute('y2', String(p2.y))
+          dot.setAttribute('cx', String(p2.x))
+          dot.setAttribute('cy', String(p2.y))
+        }
+        line.style.opacity = show ? '1' : '0'
+        dot.style.opacity = show ? '1' : '0'
+      }
+      raf = requestAnimationFrame(frame)
+    }
+    raf = requestAnimationFrame(frame)
+    return () => cancelAnimationFrame(raf)
+  }, [tour.on, nudge])
 
   function toggle() {
     clearNudge()
@@ -440,6 +579,39 @@ export default function TourProvider() {
     router.push(path)
   }
 
+  function startDrag(e: React.PointerEvent<HTMLDivElement>) {
+    if ((e.target as HTMLElement).closest('button')) return
+    const bubble = bubbleRef.current
+    if (!bubble) return
+    const rect = bubble.getBoundingClientRect()
+    const dx = e.clientX - rect.left
+    const dy = e.clientY - rect.top
+    let last = { x: rect.left, y: rect.top }
+    let moved = false
+    dragging.current = true
+    bubble.style.transition = 'none'
+    const move = (ev: PointerEvent) => {
+      moved = true
+      last = {
+        x: clamp(ev.clientX - dx, 8, window.innerWidth - rect.width - 8),
+        y: clamp(ev.clientY - dy, 8, window.innerHeight - rect.height - 8),
+      }
+      bubble.style.left = `${Math.round(last.x)}px`
+      bubble.style.top = `${Math.round(last.y)}px`
+      bubble.dataset.side = 'none'
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      bubble.style.transition = ''
+      dragging.current = false
+      if (moved) save({ ...tourRef.current, pos: last })
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    e.preventDefault()
+  }
+
   if (!ready) return null
 
   const st = STEPS[tour.i]
@@ -474,14 +646,31 @@ export default function TourProvider() {
           </div>
         </div>
       ) : tour.on ? (
+        <>
+        <svg className="tour-link" aria-hidden="true">
+          <line ref={linkRef} />
+          <circle ref={dotRef} r="4" />
+        </svg>
         <div ref={bubbleRef} className={`tour-bubble${tour.min ? ' min' : ''}`} role="dialog" aria-label="Tour guiado" data-side="none">
-          <div className="tour-top">
+          <div
+            className="tour-top"
+            title="Arraste para mover o balão"
+            onPointerDown={startDrag}
+            onDoubleClick={() => save({ ...tour, pos: null })}
+          >
             <span className="tour-persona" data-p={stepPersona}>
               <i /> Perfil: {personaLabel(st.persona)}
             </span>
-            <button type="button" aria-label={tour.min ? 'Expandir o balão' : 'Recolher o balão'} onClick={() => save({ ...tour, min: !tour.min })}>
-              <Icon name={tour.min ? 'plus' : 'minus'} size={12} />
-            </button>
+            <span className="tour-ctl">
+              {tour.pos && (
+                <button type="button" aria-label="Posicionar automaticamente" title="Posicionar automaticamente" onClick={() => save({ ...tour, pos: null })}>
+                  <Icon name="refresh-cw" size={12} />
+                </button>
+              )}
+              <button type="button" aria-label={tour.min ? 'Expandir o balão' : 'Recolher o balão'} onClick={() => save({ ...tour, min: !tour.min })}>
+                <Icon name={tour.min ? 'plus' : 'minus'} size={12} />
+              </button>
+            </span>
           </div>
           <h3>{st.title}</h3>
           <p>{st.text}</p>
@@ -499,6 +688,7 @@ export default function TourProvider() {
             </div>
           )}
         </div>
+        </>
       ) : tour.tip ? (
         <div className="tour-tip" role="status">
           Conheça a história do projeto em {minLabel(TOTAL_SEC)}
