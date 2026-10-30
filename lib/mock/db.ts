@@ -2,6 +2,7 @@
 // navegador (sessionStorage), então ações como curtir, validar e aprovar sobrevivem a recarregamentos
 // e a demonstração recomeça limpa a cada nova visita.
 import { FIXTURES } from './fixtures'
+import { EXTRA_FIXTURES } from './fixtures-extra'
 import { FOREIGN_KEYS, NULLABLE, TABLES, timestampColumns, type Row } from './schema'
 
 const STORAGE_KEY = 'ih-demo-db-v1'
@@ -53,7 +54,8 @@ function seed(): Db {
   const now = Date.now()
   const out: Db = {}
   for (const table of Object.keys(TABLES)) out[table] = []
-  for (const [table, rows] of Object.entries(FIXTURES)) {
+  for (const [table, base] of Object.entries(FIXTURES)) {
+    const rows = [...base, ...(EXTRA_FIXTURES[table] ?? [])]
     const step = TABLES[table]?.stepMs ?? 3_600_000
     out[table] = rows.map((r, i) => {
       const stamp = new Date(now - (rows.length - i) * step).toISOString()
