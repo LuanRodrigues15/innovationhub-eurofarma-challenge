@@ -2,7 +2,7 @@
 
 # Innovation HUB | Eurofarma
 
-**Versão de portfolio** do projeto vencedor do desafio da Eurofarma na FIAP Global Solution 2026.
+**Versão de portfolio** do projeto vencedor do desafio da Eurofarma global na FIAP no evento NEXT 2026.
 
 ![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=nextdotjs&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
@@ -72,4 +72,4 @@ Abra http://localhost:3000. `npm run build` gera o site estático em `out/`; o w
 
 ## Créditos
 
-Projeto acadêmico desenvolvido para o desafio da Eurofarma na FIAP Global Solution. Nome e identidade visual pertencem à Eurofarma e são usados aqui apenas para demonstração.
+Projeto acadêmico desenvolvido para o desafio da Eurofarma na FIAP no evento NEXT 2026. Nome e identidade visual pertencem à Eurofarma e são usados aqui apenas para demonstração.
