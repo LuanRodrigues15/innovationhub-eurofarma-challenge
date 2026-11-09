@@ -2,7 +2,8 @@
 
 # Innovation HUB | Eurofarma
 
-**Versão de portfolio** do projeto vencedor do desafio da Eurofarma global na FIAP no evento NEXT 2026.
+**Versão de portfolio** do projeto vencedor do desafio proposto pela Eurofarma durante o evento NEXT 2026, da FIAP.
+
 
 ![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=nextdotjs&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
