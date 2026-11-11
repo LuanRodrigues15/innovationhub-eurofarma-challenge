@@ -1,5 +1,19 @@
 # Changelog de agentes
 
+## Tour com posição fixa, perfil explícito e "Veja também"
+
+- Cartão da Eura em posição fixa (esquerda, acima do usuário da barra lateral), igual em todos os passos; saiu a
+  lógica de âncora por tela.
+- Primeira linha do cartão: "Estamos no perfil: Gestor" (ou "tela inicial"), no lugar da pílula de tela.
+- "Veja também" em todos os passos com atalhos (Métricas; Marketplace e Ranking; Mentorias; Recompensas e Ranking
+  do Totem; Usuários, Conteúdo, Moderação e Configurações). O botão abre a aba e a Eura explica cada uma
+  (`also[].text` em `steps.ts`); Voltar retorna ao passo, Próximo segue o roteiro.
+- Recolher virou "Ocultar texto" e o estado recolhido mostra "Mostrar texto da Eura".
+- Final do tour e rodapé da tela inicial: "projeto vencedor do desafio proposto pela Eurofarma durante o evento
+  NEXT 2026, da FIAP", sem citar Global Solution.
+- Testes: `next build` (297 páginas), atalho, Voltar, Próximo, ocultar e mostrar no navegador; print 14 refeito.
+- Limite conhecido: em janelas baixas (1280x720) o cartão pode cobrir o fim do menu lateral; "Ocultar texto" resolve.
+
 ## Tour em cartão compacto na barra lateral
 
 - Estudo de encaixe: a barra lateral do app tem sempre 260 px e uma zona vazia entre o menu e o usuário, de 207 a

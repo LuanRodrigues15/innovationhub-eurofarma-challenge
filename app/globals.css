@@ -10465,6 +10465,9 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
    telas sem barra lateral, no canto que cobre menos. Voltar e Próximo ficam dentro do cartão. */
 .tour-dock {
   position: fixed;
+  /* Sempre no mesmo lugar: na barra lateral é o espaço vazio logo acima do usuário (o rodapé tem 73 px) */
+  left: 12px;
+  bottom: 83px;
   z-index: 9998;
   display: flex;
   flex-direction: column;
@@ -10596,8 +10599,7 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
 }
 
 /* Botão do tour desligado e barra recolhida: mesmo vidro fosco do modo banca original, em tamanho maior */
-.tour-pill,
-.tour-bar {
+.tour-pill {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -10616,10 +10618,22 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
 .tour-pill:hover { color: #fff; border-color: rgba(255, 255, 255, 0.3); }
 .tour-pill small { font-size: 11px; font-weight: 500; opacity: 0.65; }
 .tour-pill.pulse { animation: tourPulse 2.2s ease-out infinite; }
-.tour-bar { padding: 5px 7px; gap: 7px; border-color: rgba(255, 198, 0, 0.45); }
-.tour-bar-eura { display: flex; border-radius: 9px; }
-.tour-bar-eura:hover .tour-eura { border-color: #FFC600; }
-.tour-bar-info { font-size: 11.5px; font-weight: 700; color: #fff; }
+.tour-min-title { font-weight: 700; color: #fff; }
+.tour-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 7px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #FFC600;
+  border: 1px solid rgba(255, 198, 0, 0.5);
+  border-radius: 9px;
+}
+.tour-expand:hover { background: rgba(255, 198, 0, 0.14); }
 
 .tour-sw {
   position: relative;
@@ -10738,5 +10752,90 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   .tour-dock[data-mode="step"],
   .tour-dock[data-mode="invite"],
   .tour-dock[data-mode="paused"] { left: 12px !important; right: 12px !important; bottom: 12px !important; width: auto; transform: none !important; align-items: stretch; }
-  .tour-pill, .tour-bar { align-self: flex-start; }
+  .tour-pill { align-self: flex-start; }
 }
+
+/* Perfil explícito: "Estamos no perfil: Gestor" */
+.tour-where {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 5px 9px;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+}
+.tour-where b { color: #fff; font-weight: 800; }
+.tour-where i { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; }
+.tour-where[data-p="funcionario"] i { background: #38bdf8; }
+.tour-where[data-p="gestor"] i { background: #a78bfa; }
+.tour-where[data-p="admin"] i { background: #fb923c; }
+.tour-where[data-p="totem"] i { background: #34d399; }
+
+/* Botão que oculta o texto da Eura (com rótulo, para ficar claro o que ele faz) */
+.tour-fold {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: auto !important;
+  height: 22px;
+  padding: 0 7px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 7px;
+}
+.tour-fold:hover { color: #fff; border-color: rgba(255, 255, 255, 0.35); }
+.tour-ctl { align-items: center; gap: 4px; }
+
+/* "Veja também": botões com rótulo e seta, para ficar claro que levam a outra aba */
+.tour-also { margin-top: 9px; }
+.tour-also > span { display: block; margin-bottom: 5px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: rgba(255, 255, 255, 0.55); }
+.tour-also-btns { display: flex; flex-wrap: wrap; gap: 5px; }
+.tour-also-btns button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #FFC600;
+  background: rgba(255, 198, 0, 0.08);
+  border: 1px solid rgba(255, 198, 0, 0.55);
+  border-radius: 9px;
+}
+.tour-also-btns button:hover { background: rgba(255, 198, 0, 0.2); }
+
+/* Cartão mais compacto: os controles ficam sobre a primeira linha do cabeçalho, o perfil na segunda */
+.tour-card-top { position: relative; display: block; }
+.tour-card-top .tour-ctl { position: absolute; top: -2px; right: -4px; margin: 0; }
+.tour-where {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+  background: none;
+  border: 0;
+}
+.tour-card-head .who small { margin-top: 1px; }
+.tour-kicker { margin-top: 8px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: #FFC600; }
+.tour-kicker + .tour-text { margin-top: 2px; }
+.tour-card-foot { margin-top: 8px; }
+
+/* "Veja também" na mesma linha dos botões */
+.tour-also { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 8px; }
+.tour-also > span { display: inline; margin: 0 2px 0 0; font-size: 10.5px; }
+.tour-also-btns { display: contents; }
+.tour-also-btns button { padding: 4px 9px; font-size: 11px; }
+
+/* Linha do perfil em fluxo normal: "Estamos no perfil: Gestor" sem quebrar em dois blocos */
+.tour-where { display: block; white-space: nowrap; }
+.tour-where i { display: inline-block; margin-right: 6px; vertical-align: middle; }
+.tour-card-head .who .tour-where b { display: inline; font-size: inherit; line-height: inherit; }

@@ -27,7 +27,7 @@
 | <img width="800" alt="Acessar como" src="docs/screenshots/02-acessar-como.png" /> | <img width="800" alt="Innovation IA" src="docs/screenshots/04-innovation-ia.png" /> |
 | Hub de Ideias | Triagem do gestor com peso do score híbrido |
 | <img width="800" alt="Hub de Ideias" src="docs/screenshots/05-hub-de-ideias.png" /> | <img width="800" alt="Triagem do gestor" src="docs/screenshots/08-triagem-gestor.png" /> |
-| Modo Totem para o chão de fábrica | Tour guiado pela Eura, em um cartão que mora na barra lateral |
+| Modo Totem para o chão de fábrica | Tour guiado pela Eura, em um cartão fixo no canto inferior esquerdo |
 | <img width="800" alt="Modo Totem" src="docs/screenshots/12-modo-totem.png" /> | <img width="800" alt="Tour guiado" src="docs/screenshots/14-tour-guiado.png" /> |
 
 ## Sobre o projeto
@@ -47,8 +47,9 @@ Clique em **Acessar a plataforma** e escolha **Funcionário**, **Gestor**, **Adm
 
 O botão **Fazer o tour** (canto inferior esquerdo) chama a **Eura**, que conta a jornada de uma ideia em 14 passos, em cerca de 3 minutos, trocando de perfil sozinha. É opcional e foi pensado para não atrapalhar a leitura do site:
 
-- **Cartão compacto:** fica no espaço vazio da barra lateral e, nas telas sem barra lateral, no canto que cobre menos conteúdo. Voltar e Próximo ficam sempre no mesmo lugar.
-- **Dá para recolher:** o texto minimiza e deixa só os controles.
+- **Posição fixa:** o cartão fica sempre no mesmo lugar, e a primeira linha diz em qual perfil estamos ("Estamos no perfil: Gestor").
+- **Veja também:** passos com outras abas trazem botões como "Métricas" ou "Ranking". Ao clicar, a Eura abre a aba e explica o que ela faz.
+- **Dá para recolher:** "Ocultar texto" esconde a explicação, e "Mostrar texto da Eura" traz de volta.
 - **Retoma de onde parou:** se você começar a mexer em outra parte do site, o tour pausa e oferece continuar do passo em que estava, ou mostrar a aba ou o perfil em que você está.
 
 ## O que é simulado

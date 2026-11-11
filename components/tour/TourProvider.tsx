@@ -20,10 +20,10 @@ import {
   type TourRun,
 } from './steps'
 
-// Tour guiado opcional, contado pela Eura em um cartão compacto. Ele mora em um espaço que já está vazio:
-// na barra lateral do app (entre o menu e o usuário) e, nas telas sem barra lateral, no canto que cobre
-// menos. Voltar e Próximo ficam dentro do cartão, sempre no mesmo lugar. Quando a pessoa mexe em outra
-// parte do site, o tour pausa e oferece continuar de onde parou. Estado em sessionStorage.
+// Tour guiado opcional, contado pela Eura em um cartão compacto que fica sempre no mesmo lugar (canto inferior
+// esquerdo, que nas telas com menu é o espaço vazio da barra lateral). Voltar e Próximo ficam dentro do cartão.
+// Os atalhos "Veja também" levam a outra aba e a Eura explica também ali. Quando a pessoa mexe em outra parte
+// do site, o tour pausa e oferece continuar de onde parou. Estado em sessionStorage.
 
 const STORAGE_KEY = 'ih-demo-tour'
 const MAX_DISMISSALS = 3
@@ -31,7 +31,7 @@ const MAX_DISMISSALS = 3
 type TourState = {
   on: boolean
   i: number
-  /** Cartão recolhido: fica só a barra com os controles. */
+  /** Texto da Eura recolhido: ficam só o cabeçalho, o perfil e os controles. */
   min: boolean
   tip: boolean
   nudged: Record<string, true>
@@ -39,10 +39,8 @@ type TourState = {
 }
 type Nudge = { kind: 'page' | 'profile'; step: number; path: string; label: string }
 type Banner = { from: string; to: string }
-type Anchor = { align: 'left' | 'right' | 'center'; x: number; bottom: number }
 
 const DEFAULT_STATE: TourState = { on: false, i: 0, min: false, tip: true, nudged: {}, dismissals: 0 }
-const DEFAULT_ANCHOR: Anchor = { align: 'left', x: 18, bottom: 18 }
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const minLabel = (s: number) => (s >= 60 ? `~${Math.round(s / 60)} min` : `${s}s`)
@@ -105,77 +103,6 @@ async function approveDemoIdea() {
   }
 }
 
-/* ───────── onde o tour fica: um espaço que já está vazio ───────── */
-
-const OVERLAY_UI = '.tour-dock,.tour-switch'
-const INTERACTIVE = 'button,a,[role="button"],input,textarea,select,label'
-
-/** O ponto da tela tem algo que o tour esconderia: texto, botão, campo, ícone ou imagem. */
-function isContent(el: Element | null): boolean {
-  if (!el || el.closest(OVERLAY_UI)) return false
-  if (el.closest(INTERACTIVE) || el instanceof SVGElement || el instanceof HTMLImageElement) return true
-  return Array.from(el.childNodes).some((n) => n.nodeType === 3 && (n.textContent ?? '').trim() !== '')
-}
-
-/** Quantos pontos de uma grade 7x5 sobre o retângulo caem em conteúdo da página. */
-function coverage(x: number, y: number, w: number, h: number): number {
-  let count = 0
-  for (let i = 0; i < 7; i++) {
-    for (let j = 0; j < 5; j++) {
-      if (isContent(document.elementFromPoint(x + ((i + 0.5) * w) / 7, y + ((j + 0.5) * h) / 5))) count++
-    }
-  }
-  return count
-}
-
-/**
- * Escolhe onde ancorar o tour. Nas telas com barra lateral, a zona vazia entre o menu e o usuário (o menor
- * espaço medido é 207 px de altura, em 1280x720 com o perfil de funcionário). Nas demais, o canto de baixo
- * que cobre menos conteúdo. A escolha usa a medição real da página, não uma posição fixa.
- */
-function chooseAnchor(dock: HTMLElement, current: Anchor): Anchor {
-  const vw = window.innerWidth
-  const vh = window.innerHeight
-  const w = dock.offsetWidth
-  const h = dock.offsetHeight
-  const sidebar = document.querySelector('.ih-sidebar')?.getBoundingClientRect()
-  const footer = document.querySelector('.ih-sidebar-footer')?.getBoundingClientRect()
-  const landingFoot = document.querySelector('.ih-landing-foot')?.getBoundingClientRect()
-  const base = landingFoot ? Math.min(Math.max(vh - landingFoot.top + 8, 18), 120) : 18
-
-  type Cand = { a: Anchor; x: number; y: number; pref: number }
-  const cands: Cand[] = []
-  const add = (align: Anchor['align'], x: number, y: number, pref: number) => {
-    const cy = Math.min(Math.max(y, 12), Math.max(12, vh - h - 12))
-    cands.push({ a: { align, x, bottom: vh - cy - h }, x, y: cy, pref })
-  }
-  if (sidebar && footer && sidebar.width >= 200) {
-    add('left', sidebar.left + 12, footer.top - 10 - h, 0)
-  }
-  // Cantos e laterais da tela: o de baixo é o preferido; o meio e o topo servem de reserva
-  const bottomY = vh - base - h
-  const middleY = (vh - h) / 2
-  add('left', 18, bottomY, 1)
-  add('left', 18, middleY, 2)
-  add('left', 18, 72, 2.5)
-  add('right', vw - w - 18, bottomY, 2)
-  add('right', vw - w - 18, middleY, 3)
-  add('right', vw - w - 18, 72, 3.5)
-  add('center', (vw - w) / 2, bottomY, 3)
-
-  dock.style.pointerEvents = 'none' // o tour não pode "esconder" o que está sob ele na medição
-  const scored = cands.map((c) => ({ c, cost: coverage(c.x, c.y, w, h) * 8 + c.pref }))
-  dock.style.pointerEvents = ''
-
-  const best = scored.reduce((m, s) => (s.cost < m.cost ? s : m))
-  // Histerese: só muda de lugar se o novo for bem melhor, para o tour não ficar pulando
-  const stay = scored.find(
-    (s) => s.c.a.align === current.align && Math.abs(s.c.a.bottom - current.bottom) < 3 && (s.c.a.align !== 'left' || Math.abs(s.c.a.x - current.x) < 3)
-  )
-  if (stay && best.cost > stay.cost - 6) return stay.c.a
-  return best.c.a
-}
-
 /* ───────── peças visuais ───────── */
 
 /** Texto que a Eura "digita". O texto inteiro fica invisível por baixo para o cartão nunca mudar de altura. */
@@ -220,11 +147,13 @@ export default function TourProvider() {
   const [tour, setTour] = useState<TourState>(DEFAULT_STATE)
   const [nudge, setNudge] = useState<Nudge | null>(null)
   const [banner, setBanner] = useState<Banner | null>(null)
-  const [anchor, setAnchor] = useState<Anchor>(DEFAULT_ANCHOR)
   const [off, setOff] = useState(false)
   const [animate, setAnimate] = useState(false)
+  /** Índice do atalho "Veja também" aberto no passo atual (a Eura explica a aba), ou null. */
+  const [detour, setDetourState] = useState<number | null>(null)
 
   const tourRef = useRef(tour)
+  const detourRef = useRef<number | null>(null)
   const pathRef = useRef(pathname)
   const runRef = useRef(0)
   const skipUntil = useRef(0)
@@ -232,8 +161,11 @@ export default function TourProvider() {
   const prev = useRef<{ persona: PersonaId | null; path: string } | null>(null)
   const nudgeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const dockRef = useRef<HTMLDivElement>(null)
-  const anchorRef = useRef(DEFAULT_ANCHOR)
+
+  const setDetour = useCallback((k: number | null) => {
+    detourRef.current = k
+    setDetourState(k)
+  }, [])
 
   const save = useCallback((next: TourState) => {
     tourRef.current = next
@@ -287,6 +219,7 @@ export default function TourProvider() {
       skipUntil.current = Date.now() + 3500
       const st = STEPS[i]
       setAnimate(true)
+      setDetour(null)
       save({ ...tourRef.current, on: true, i, tip: false })
 
       const persona = currentPersona()
@@ -322,7 +255,7 @@ export default function TourProvider() {
         if (runRef.current === run) void runDemo(st.run, run)
       }
     },
-    [clearNudge, router, runDemo, save]
+    [clearNudge, router, runDemo, save, setDetour]
   )
 
   const maybeNudge = useCallback(
@@ -376,7 +309,8 @@ export default function TourProvider() {
     else if (normalizePath(pathname) !== normalizePath(before.path)) maybeNudge('page', persona, key, pathname)
   }, [pathname, ready, enterStep, maybeNudge])
 
-  // Tour ligado, mas a pessoa foi para outra parte do site: pausa e oferece continuar de onde parou
+  // Tour ligado: acompanha onde a pessoa está. Na página do passo, tudo certo; numa aba do "Veja também", a Eura
+  // explica essa aba; em qualquer outro lugar, pausa e oferece continuar de onde parou.
   useEffect(() => {
     if (!ready || !tour.on) {
       setOff(false)
@@ -386,17 +320,26 @@ export default function TourProvider() {
       const persona = currentPersona()
       const key = pageKey(pathname)
       const st = STEPS[tour.i]
-      const here = st.persona === persona && !!key && (key === st.page || !!st.also?.some((a) => a.page === key))
-      setOff(!here)
+      if (st.persona !== persona || !key) return setOff(true)
+      if (key === st.page) {
+        if (detourRef.current !== null) setDetour(null)
+        return setOff(false)
+      }
+      const k = st.also?.findIndex((a) => a.page === key) ?? -1
+      if (k >= 0) {
+        if (detourRef.current !== k) setDetour(k)
+        return setOff(false)
+      }
+      setOff(true)
     }
     const timer = setTimeout(compute, Math.max(0, skipUntil.current - Date.now()) + 700)
     return () => clearTimeout(timer)
-  }, [pathname, tour.on, tour.i, ready])
+  }, [pathname, tour.on, tour.i, ready, setDetour])
 
   // Destaque do elemento do passo; reaplicado porque o React recria os elementos da página
   useEffect(() => {
     const clearHighlight = () => document.querySelectorAll('.tour-hl').forEach((e) => e.classList.remove('tour-hl'))
-    if (!tour.on || nudge || off) {
+    if (!tour.on || nudge || off || detour !== null) {
       clearHighlight()
       return
     }
@@ -423,29 +366,7 @@ export default function TourProvider() {
       clearInterval(timer)
       clearHighlight()
     }
-  }, [tour.on, tour.i, nudge, off])
-
-  // Ancoragem: reavaliada de tempos em tempos e quando a tela muda de tamanho
-  useEffect(() => {
-    if (!ready) return
-    const choose = () => {
-      const dock = dockRef.current
-      if (!dock || window.innerWidth <= 640) return
-      const next = chooseAnchor(dock, anchorRef.current)
-      const cur = anchorRef.current
-      if (next.align !== cur.align || Math.abs(next.x - cur.x) > 2 || Math.abs(next.bottom - cur.bottom) > 2) {
-        anchorRef.current = next
-        setAnchor(next)
-      }
-    }
-    choose()
-    const timer = setInterval(choose, 800)
-    window.addEventListener('resize', choose)
-    return () => {
-      clearInterval(timer)
-      window.removeEventListener('resize', choose)
-    }
-  }, [ready, tour.on, tour.min, tour.i, nudge, off, pathname])
+  }, [tour.on, tour.i, nudge, off, detour])
 
   /* ── ações ── */
 
@@ -488,9 +409,20 @@ export default function TourProvider() {
     void enterStep(i + 1)
   }
 
+  /** Voltar: dentro de uma aba do "Veja também" volta ao passo; senão, ao passo anterior. */
   function previous() {
     const i = tourRef.current.i
+    if (detourRef.current !== null) return void enterStep(i)
     if (i > 0) void enterStep(i - 1)
+  }
+
+  function openDetour(k: number) {
+    const item = STEPS[tourRef.current.i].also?.[k]
+    if (!item) return
+    skipUntil.current = Date.now() + 2500
+    setAnimate(true)
+    setDetour(k)
+    if (normalizePath(pathRef.current) !== item.path) router.push(item.path)
   }
 
   function restart() {
@@ -514,11 +446,6 @@ export default function TourProvider() {
     save({ ...tourRef.current, dismissals: tourRef.current.dismissals + 1 })
   }
 
-  function go(path: string) {
-    skipUntil.current = Date.now() + 2500
-    router.push(path)
-  }
-
   if (!ready) return null
 
   const st = STEPS[tour.i]
@@ -531,25 +458,17 @@ export default function TourProvider() {
   const here = persona ? (persona !== st.persona ? PROFILE_STEP[persona] : key ? PAGE_STEP[persona]?.[key] : null) : null
   const pausedOffer = here !== null && here !== undefined && here !== tour.i ? here : null
 
-  const style: React.CSSProperties = {
-    bottom: anchor.bottom,
-    ...(anchor.align === 'left' ? { left: anchor.x } : anchor.align === 'right' ? { right: 18 } : { left: '50%', transform: 'translateX(-50%)' }),
-  }
+  // O que o cartão mostra: o passo ou, num "Veja também", a explicação daquela aba
+  const side = detour !== null ? st.also?.[detour] ?? null : null
+  const viewText = side ? side.text : st.text
+  const others = (st.also ?? []).map((a, k) => ({ a, k })).filter(({ k }) => k !== detour)
 
-  const head = (title: string, withPersona: boolean) => (
+  const head = (sub: React.ReactNode) => (
     <div className="tour-card-head">
       <EuraAvatar size={28} />
       <div className="who">
         <b>Eura</b>
-        <small>
-          {withPersona ? (
-            <span className="tour-persona" data-p={st.persona ?? 'none'}>
-              <i /> {personaLabel(st.persona)}
-            </span>
-          ) : (
-            title
-          )}
-        </small>
+        {sub && <small>{sub}</small>}
       </div>
     </div>
   )
@@ -560,7 +479,7 @@ export default function TourProvider() {
     mode = 'invite'
     body = (
       <div className="tour-card">
-        {head('Convite', false)}
+        {head('Convite')}
         <p className="tour-text">
           {nudge.kind === 'page' ? (
             <>Você está em <b>{nudge.label}</b>. Quer que eu te mostre esta aba?</>
@@ -578,7 +497,7 @@ export default function TourProvider() {
     mode = 'paused'
     body = (
       <div className="tour-card">
-        {head('Tour em pausa', false)}
+        {head('Tour em pausa')}
         <p className="tour-text">
           Pausei no passo <b>{tour.i + 1} de {STEPS.length}</b>, &quot;{st.title}&quot;, porque você foi para outra parte do site.
         </p>
@@ -599,50 +518,73 @@ export default function TourProvider() {
         </div>
       </div>
     )
-  } else if (tour.on && tour.min) {
-    mode = 'min'
-    body = (
-      <div className="tour-bar">
-        <button type="button" className="tour-bar-eura" aria-label="Abrir o texto da Eura" title="Abrir o texto da Eura" onClick={() => save({ ...tour, min: false })}>
-          <EuraAvatar size={26} />
-        </button>
-        <span className="tour-bar-info">{tour.i + 1}/{STEPS.length}</span>
-        <button type="button" className="tour-nav" onClick={previous} disabled={tour.i === 0}>Voltar</button>
-        <button type="button" className="tour-nav primary" onClick={() => void next()}>
-          {last ? 'Concluir' : 'Próximo'} <Icon name="chevron-right" size={14} />
-        </button>
-      </div>
-    )
   } else if (tour.on) {
     mode = 'step'
     body = (
-      <div className="tour-card" style={{ ['--p' as string]: (tour.i + 1) / STEPS.length }}>
+      <div className={`tour-card${tour.min ? ' collapsed' : ''}`} style={{ ['--p' as string]: (tour.i + 1) / STEPS.length }}>
         <div className="tour-progress"><i /></div>
         <div className="tour-card-top">
-          {head(st.title, true)}
+          {head(
+            <span className="tour-where" data-p={st.persona ?? 'none'}>
+              <i />
+              {st.persona ? (
+                <>Estamos no perfil: <b>{ROLE_LABEL[st.persona]}</b></>
+              ) : (
+                <>Estamos na <b>tela inicial</b></>
+              )}
+            </span>
+          )}
           <span className="tour-ctl">
-            <button type="button" aria-label="Recolher o texto" title="Recolher o texto" onClick={() => save({ ...tour, min: true })}>
-              <Icon name="minus" size={13} />
-            </button>
+            {!tour.min && (
+              <button type="button" className="tour-fold" title="Ocultar o texto da Eura" onClick={() => save({ ...tour, min: true })}>
+                Ocultar texto <Icon name="chevron-down" size={11} />
+              </button>
+            )}
             <button type="button" aria-label="Desligar o tour" title="Desligar o tour" onClick={toggle}>
               <Icon name="x" size={13} />
             </button>
           </span>
         </div>
-        <p className="tour-text">
-          <StepText key={tour.i} text={st.text} animate={animate} />
-        </p>
-        {(st.also || st.restart) && (
-          <div className="tour-chips">
-            {st.also?.map((a) => (
-              <button key={a.path} type="button" onClick={() => go(a.path)}>{a.label}</button>
-            ))}
-            {st.restart && <button type="button" onClick={restart}>Recomeçar o tour</button>}
-          </div>
+
+        {tour.min ? (
+          <button type="button" className="tour-expand" onClick={() => save({ ...tour, min: false })}>
+            Mostrar texto da Eura <Icon name="chevron-up" size={13} />
+          </button>
+        ) : (
+          <>
+            {side && <div className="tour-kicker">Veja também: {side.label}</div>}
+            <p className="tour-text">
+              <StepText key={`${tour.i}-${detour}`} text={viewText} animate={animate} />
+            </p>
+            {others.length > 0 && (
+              <div className="tour-also">
+                <span>Veja também:</span>
+                <div className="tour-also-btns">
+                  {others.map(({ a, k }) => (
+                    <button key={a.path} type="button" onClick={() => openDetour(k)}>
+                      {a.label} <Icon name="chevron-right" size={11} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {st.restart && (
+              <div className="tour-also">
+                <div className="tour-also-btns">
+                  <button type="button" onClick={restart}>
+                    Recomeçar o tour <Icon name="refresh-cw" size={11} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
+
         <div className="tour-card-foot">
           <span className="tour-count">{tour.i + 1}/{STEPS.length} <small>{minLabel(remaining)}</small></span>
-          <button type="button" className="tour-nav" onClick={previous} disabled={tour.i === 0}>Voltar</button>
+          <button type="button" className="tour-nav" onClick={previous} disabled={tour.i === 0 && detour === null} title={detour !== null ? 'Voltar ao passo' : undefined}>
+            Voltar
+          </button>
           <button type="button" className="tour-nav primary" onClick={() => void next()}>
             {last ? 'Concluir' : 'Próximo'} <Icon name="chevron-right" size={14} />
           </button>
@@ -691,7 +633,7 @@ export default function TourProvider() {
           <b>{banner.to}</b>
         </div>
       )}
-      <div ref={dockRef} className="tour-dock" data-mode={mode} style={style} role="region" aria-label="Guia do tour">
+      <div className="tour-dock" data-mode={mode} role="region" aria-label="Guia do tour">
         {body}
       </div>
     </>

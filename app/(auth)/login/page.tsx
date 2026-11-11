@@ -239,7 +239,7 @@ export default function LoginPage() {
 
       {/* Footer */}
       <footer className="ih-landing-foot">
-        <span className="ih-landing-foot-copy">Eurofarma · FIAP Global Solution 2026</span>
+        <span className="ih-landing-foot-copy">Eurofarma · FIAP NEXT 2026</span>
         <span className="ih-landing-foot-copy">Demonstração com dados simulados</span>
       </footer>
 

@@ -16,7 +16,7 @@ export type TourStep = {
   run?: TourRun
   /** Elemento a destacar: seletor CSS, ou "@publish" para o botão de publicar da Eura. */
   hl?: string
-  also?: { label: string; path: string; page: string }[]
+  also?: { label: string; path: string; page: string; text: string }[]
   restart?: boolean
 }
 
@@ -41,26 +41,26 @@ export const STEPS: TourStep[] = [
     text: 'Este é o Hub de Ideias, o mural com as ideias de todos. Dá para filtrar por status, comentar e validar (apoiar) as ideias de colegas.' },
   { title: 'Triagem do gestor', sec: 24, persona: 'gestor', path: '/manager/dashboard/hub', page: 'triage', hl: 'input.manager-hub-range',
     text: 'Agora o gestor. Ideias com apoio suficiente chegam até ele. Ele define quanto pesa a nota da IA e quanto pesa a da comunidade, e aprova. Só ao aprovar o nome do autor aparece.',
-    also: [{ label: 'Métricas', path: '/manager/metrics', page: 'metrics' }] },
+    also: [{ label: 'Métricas', path: '/manager/metrics', page: 'metrics', text: 'Em Métricas eu mostro a saúde do setor: quantas ideias há em cada status, o engajamento do time e a evolução ao longo do tempo.' }] },
   { title: 'Recompensa', sec: 14, persona: 'funcionario', path: '/dashboard', page: 'dash', hl: '.ih-nav-item[data-label="Marketplace"]',
-    text: 'A ideia da funcionária foi aprovada e rendeu 100 pontos! No Marketplace os pontos viram benefícios, e o ranking mostra quem mais participa.',
-    also: [{ label: 'Marketplace', path: '/marketplace', page: 'market' }, { label: 'Ranking', path: '/leaderboard', page: 'rank' }] },
+    text: 'A ideia da funcionária foi aprovada e rendeu 100 pontos! Eles viram benefícios e fazem subir a posição no ranking.',
+    also: [{ label: 'Marketplace', path: '/marketplace', page: 'market', text: 'No Marketplace os pontos viram benefícios reais. Cada item tem um custo em pontos, e o resgate desconta o saldo na hora.' }, { label: 'Ranking', path: '/leaderboard', page: 'rank', text: 'O Ranking mostra quem mais participa, por setor ou geral. Quem preferir pode ficar anônimo e continua somando pontos e subindo de nível.' }] },
   { title: 'Academy e Mentorias', sec: 8, persona: 'funcionario', path: '/academy', page: 'academy', hl: '.ih-nav-item[data-label="Mentorias"]',
     text: 'Tem mais: a Academy tem cursos com quiz que geram pontos, e as Mentorias conectam quem sabe a quem quer aprender.',
-    also: [{ label: 'Mentorias', path: '/mentorships', page: 'mentors' }] },
+    also: [{ label: 'Mentorias', path: '/mentorships', page: 'mentors', text: 'Em Mentorias, quem sabe pode se candidatar a mentor e quem quer aprender encontra um mentor da área. Os dois lados ganham pontos.' }] },
   { title: 'Totem completo', sec: 6, persona: 'totem', path: '/totem/hub', page: 'thub',
     text: 'O Totem também tem Hub, recompensas e ranking, no mesmo formato grande e simples.',
-    also: [{ label: 'Recompensas', path: '/totem/marketplace', page: 'tmarket' }, { label: 'Ranking', path: '/totem/ranking', page: 'trank' }] },
+    also: [{ label: 'Recompensas', path: '/totem/marketplace', page: 'tmarket', text: 'As Recompensas do Totem funcionam como o Marketplace: a pessoa troca pontos por benefícios, com botões grandes e simples.' }, { label: 'Ranking', path: '/totem/ranking', page: 'trank', text: 'O Ranking do Totem mostra a posição de cada colaborador, no mesmo formato grande e simples.' }] },
   { title: 'Painel do administrador', sec: 12, persona: 'admin', path: '/admin/dashboard', page: 'adash', hl: '.ih-nav-item[data-label="Configurações"]',
     text: 'Por trás de tudo está o administrador: ele gerencia usuários, cursos, alertas e as regras, como quantos apoios uma ideia precisa e quantos pontos cada ação vale.',
     also: [
-      { label: 'Usuários', path: '/admin/users', page: 'users' },
-      { label: 'Conteúdo', path: '/admin/content', page: 'content' },
-      { label: 'Moderação', path: '/admin/moderation', page: 'moderation' },
-      { label: 'Configurações', path: '/admin/settings', page: 'settings' },
+      { label: 'Usuários', path: '/admin/users', page: 'users', text: 'Em Usuários o administrador cria, edita e remove perfis e mentores, e ajusta pontos e nível.' },
+      { label: 'Conteúdo', path: '/admin/content', page: 'content', text: 'Em Conteúdo ele gerencia os cursos e quizzes da Academy e os setores da empresa.' },
+      { label: 'Moderação', path: '/admin/moderation', page: 'moderation', text: 'Em Moderação chegam os alertas que eu registro quando alguém escreve algo inadequado, para ele analisar.' },
+      { label: 'Configurações', path: '/admin/settings', page: 'settings', text: 'Em Configurações ficam as regras: quantas validações uma ideia precisa, o peso do score da IA e quantos pontos vale cada ação.' },
     ] },
   { title: 'Fim do tour', sec: 8, persona: null, path: '/login', page: 'landing', restart: true,
-    text: 'É isso! Toda boa ideia tem chance de brilhar. Agora você pode explorar o site à vontade, em qualquer perfil. Este é um projeto da FIAP Global Solution para a Eurofarma, com dados simulados.' },
+    text: 'É isso! Toda boa ideia tem chance de brilhar. Agora você pode explorar o site à vontade, em qualquer perfil. Esta é a versão de portfolio do projeto vencedor do desafio proposto pela Eurofarma durante o evento NEXT 2026, da FIAP. Os dados são simulados.' },
 ]
 
 export const TOTAL_SEC = STEPS.reduce((a, s) => a + s.sec, 0)
