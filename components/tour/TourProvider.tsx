@@ -543,22 +543,21 @@ export default function TourProvider() {
             )}
           </div>
           <span className="tour-ctl">
-            {!tour.min && (
-              <button type="button" className="tour-fold" title="Ocultar o texto da Eura" onClick={() => save({ ...tour, min: true })}>
-                Ocultar texto <Icon name="chevron-down" size={11} />
-              </button>
-            )}
+            <button
+              type="button"
+              className="tour-fold"
+              title={tour.min ? 'Mostrar o texto da Eura' : 'Ocultar o texto da Eura'}
+              onClick={() => save({ ...tour, min: !tour.min })}
+            >
+              {tour.min ? 'Mostrar texto' : 'Ocultar texto'} <Icon name={tour.min ? 'chevron-up' : 'chevron-down'} size={11} />
+            </button>
             <button type="button" aria-label="Desligar o tour" title="Desligar o tour" onClick={toggle}>
               <Icon name="x" size={13} />
             </button>
           </span>
         </div>
 
-        {tour.min ? (
-          <button type="button" className="tour-expand" onClick={() => save({ ...tour, min: false })}>
-            Mostrar texto da Eura <Icon name="chevron-up" size={13} />
-          </button>
-        ) : (
+        {!tour.min && (
           <>
             {side && <div className="tour-kicker">Veja também: {side.label}</div>}
             <p className="tour-text">

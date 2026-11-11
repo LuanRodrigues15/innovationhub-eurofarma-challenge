@@ -10557,10 +10557,12 @@ html:not([data-theme="dark"]):not([data-tour-dark]) .tour-switch {
 }
 .tour-ctl button:hover { background: var(--t-hover); color: var(--t-fg); }
 .tour-ctl .tour-fold {
-  width: auto;
+  width: 102px;
   height: 24px;
   gap: 4px;
   padding: 0 8px;
+  justify-content: center;
+  white-space: nowrap;
   font-size: 10.5px;
   font-weight: 700;
   border: 1px solid var(--t-btn-line);
@@ -10615,6 +10617,11 @@ html:not([data-theme="dark"]):not([data-tour-dark]) .tour-switch {
 }
 .tour-also-btns button:hover { background: var(--t-hover); border-color: var(--t-link); }
 
+/* Texto oculto: o cartão encolhe e o botão do topo vira "Mostrar texto", no mesmo lugar e tamanho */
+.tour-card.collapsed { padding-bottom: 10px; }
+.tour-card.collapsed .tour-where { margin-top: 9px; padding-top: 8px; }
+.tour-card.collapsed .tour-card-foot { margin-top: 9px; padding-top: 0; border-top: 0; }
+
 /* Rodapé: contagem à esquerda, navegação à direita, separados do texto por uma linha */
 .tour-card-foot { display: flex; align-items: center; gap: 6px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--t-line); }
 .tour-count { flex: 1; font-size: 11px; font-weight: 800; color: var(--t-fg); white-space: nowrap; }
@@ -10634,24 +10641,6 @@ html:not([data-theme="dark"]):not([data-tour-dark]) .tour-switch {
 .tour-nav:disabled { opacity: 0.35; cursor: default; }
 .tour-nav.primary { background: var(--t-accent); border-color: var(--t-accent); color: var(--t-accent-ink); }
 .tour-nav.primary:hover { filter: brightness(1.06); background: var(--t-accent); }
-
-/* Texto oculto: só o botão para mostrar de novo */
-.tour-expand {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  margin-top: 12px;
-  padding: 8px 10px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--t-link);
-  background: var(--t-link-bg);
-  border: 1px solid var(--t-link-line);
-  border-radius: 9px;
-}
-.tour-expand:hover { background: var(--t-hover); border-color: var(--t-link); }
 
 /* Convite e pausa */
 .tour-actions { display: flex; gap: 8px; margin-top: 14px; }

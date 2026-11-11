@@ -49,7 +49,7 @@ O botão **Fazer o tour** (canto inferior esquerdo) chama a **Eura**, que conta 
 
 - **Posição fixa:** o cartão fica sempre no mesmo lugar, acompanha o tema claro ou escuro do site e diz em qual perfil estamos ("Estamos no perfil: Gestor").
 - **Veja também:** passos com outras abas trazem botões como "Métricas" ou "Ranking". Ao clicar, a Eura abre a aba e explica o que ela faz.
-- **Dá para recolher:** "Ocultar texto" esconde a explicação, e "Mostrar texto da Eura" traz de volta.
+- **Dá para recolher:** o botão "Ocultar texto" esconde a explicação e vira "Mostrar texto", no mesmo lugar.
 - **Retoma de onde parou:** se você começar a mexer em outra parte do site, o tour pausa e oferece continuar do passo em que estava, ou mostrar a aba ou o perfil em que você está.
 
 ## O que é simulado

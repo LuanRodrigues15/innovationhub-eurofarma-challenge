@@ -1,5 +1,12 @@
 # Changelog de agentes
 
+## Ocultar e mostrar texto no mesmo botão
+
+- O botão do topo do cartão alterna entre "Ocultar texto" e "Mostrar texto" na mesma posição e com o mesmo
+  tamanho (102x24 px). Saiu o botão largo "Mostrar texto da Eura".
+- Cartão recolhido mais enxuto, sem a segunda linha divisória: 131 px (antes 154 px; aberto continua 308 px no passo 10).
+- Testes: posição e tamanho do botão iguais nos dois estados, nos temas escuro e claro.
+
 ## Tour com mais respiro e tema claro/escuro
 
 - Bloco de CSS do tour reescrito em um só (antes eram remendos): cartão de 244 px alinhado aos itens do menu, mais
