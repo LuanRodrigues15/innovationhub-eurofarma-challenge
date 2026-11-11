@@ -446,6 +446,15 @@ export default function TourProvider() {
     save({ ...tourRef.current, dismissals: tourRef.current.dismissals + 1 })
   }
 
+  // O Totem é sempre escuro (não tem tema claro): ali o cartão também fica escuro, mesmo com o site no modo claro
+  const onTotem = normalizePath(pathname).startsWith('/totem')
+  useEffect(() => {
+    const root = document.documentElement
+    if (onTotem) root.setAttribute('data-tour-dark', '')
+    else root.removeAttribute('data-tour-dark')
+    return () => root.removeAttribute('data-tour-dark')
+  }, [onTotem])
+
   if (!ready) return null
 
   const st = STEPS[tour.i]
@@ -524,16 +533,15 @@ export default function TourProvider() {
       <div className={`tour-card${tour.min ? ' collapsed' : ''}`} style={{ ['--p' as string]: (tour.i + 1) / STEPS.length }}>
         <div className="tour-progress"><i /></div>
         <div className="tour-card-top">
-          {head(
-            <span className="tour-where" data-p={st.persona ?? 'none'}>
-              <i />
-              {st.persona ? (
-                <>Estamos no perfil: <b>{ROLE_LABEL[st.persona]}</b></>
-              ) : (
-                <>Estamos na <b>tela inicial</b></>
-              )}
-            </span>
-          )}
+          {head('')}
+          <div className="tour-where" data-p={st.persona ?? 'none'}>
+            <i />
+            {st.persona ? (
+              <>Estamos no perfil: <b>{ROLE_LABEL[st.persona]}</b></>
+            ) : (
+              <>Estamos na <b>tela inicial</b></>
+            )}
+          </div>
           <span className="tour-ctl">
             {!tour.min && (
               <button type="button" className="tour-fold" title="Ocultar o texto da Eura" onClick={() => save({ ...tour, min: true })}>

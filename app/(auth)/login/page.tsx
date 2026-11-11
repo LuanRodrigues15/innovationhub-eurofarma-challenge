@@ -75,13 +75,16 @@ export default function LoginPage() {
 
   useEffect(() => {
     const stored = localStorage.getItem('ih-dark-mode')
+    let isDark: boolean
     if (stored !== null) {
-      setDark(stored === 'true')
+      isDark = stored === 'true'
     } else {
-      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      localStorage.setItem('ih-dark-mode', String(systemDark))
-      setDark(systemDark)
+      isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      localStorage.setItem('ih-dark-mode', String(isDark))
     }
+    setDark(isDark)
+    // O tema fica na raiz para o resto da página (e o tour) seguir o mesmo modo
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
   }, [])
 
   function toggleTheme() {

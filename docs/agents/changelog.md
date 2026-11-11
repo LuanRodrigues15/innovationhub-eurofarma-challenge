@@ -1,5 +1,17 @@
 # Changelog de agentes
 
+## Tour com mais respiro e tema claro/escuro
+
+- Bloco de CSS do tour reescrito em um só (antes eram remendos): cartão de 244 px alinhado aos itens do menu, mais
+  respiro (padding 14 px, perfil em linha própria, rodapé separado por linha) e contagem com tempo em duas linhas.
+- "Veja também" em grade de 2 colunas, sem quebrar em 3 linhas no admin (cartão de 399 px caiu para 353 px).
+- Cores por variáveis (--t-*): escuro por padrão, claro quando a raiz não tem data-theme=dark. O Totem não tem tema
+  claro, então o cartão fica escuro lá (atributo data-tour-dark na raiz). Destaque do item: amarelo no escuro, azul no claro.
+- Login passou a gravar data-theme na raiz ao carregar (antes só ao alternar), para o tour ler o tema certo.
+- Em telas baixas (até 820 px de altura) o espaçamento é mais enxuto. Limite conhecido: a 1366x768 o cartão do
+  funcionário cobre cerca de 30 px do fim do menu; "Ocultar texto" resolve.
+- Testes: next build (297 páginas), troca de tema com o tour aberto, Totem claro e escuro, print 14 refeito.
+
 ## Tour com posição fixa, perfil explícito e "Veja também"
 
 - Cartão da Eura em posição fixa (esquerda, acima do usuário da barra lateral), igual em todos os passos; saiu a

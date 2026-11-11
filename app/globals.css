@@ -10460,14 +10460,58 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   cursor: default;
 }
 
-/* ─── Tour guiado, contado pela Eura em um cartão compacto ─────
-   O cartão mora em um espaço que já está vazio (a barra lateral do app, entre o menu e o usuário) e, nas
-   telas sem barra lateral, no canto que cobre menos. Voltar e Próximo ficam dentro do cartão. */
+/* ─── Tour guiado, contado pela Eura em um cartão fixo ─────
+   O cartão fica sempre no mesmo lugar: canto inferior esquerdo, no espaço vazio da barra lateral entre o menu
+   e o usuário. As cores vêm de variáveis e seguem o tema do site (data-theme na raiz): escuro por padrão do
+   cartão, claro quando o site está claro. */
+.tour-dock,
+.tour-switch {
+  --t-bg: rgba(11, 23, 51, 0.98);
+  --t-fg: #ffffff;
+  --t-text: rgba(255, 255, 255, 0.88);
+  --t-sub: rgba(255, 255, 255, 0.62);
+  --t-line: rgba(255, 255, 255, 0.12);
+  --t-btn-line: rgba(255, 255, 255, 0.2);
+  --t-hover: rgba(255, 255, 255, 0.1);
+  --t-accent: #FFC600;
+  --t-accent-ink: #0B1733;
+  --t-link: #FFC600;
+  --t-link-bg: rgba(255, 198, 0, 0.1);
+  --t-link-line: rgba(255, 198, 0, 0.55);
+  --t-shadow: 0 12px 34px rgba(0, 0, 0, 0.42);
+  --t-glass: rgba(0, 0, 0, 0.5);
+  --t-avatar-bg: rgba(11, 23, 51, 0.95);
+  --t-avatar-fg: #FFC600;
+  --t-avatar-line: rgba(255, 255, 255, 0.14);
+  --t-hl: 255, 198, 0;
+}
+html:not([data-theme="dark"]):not([data-tour-dark]) .tour-dock,
+html:not([data-theme="dark"]):not([data-tour-dark]) .tour-switch {
+  --t-bg: rgba(255, 255, 255, 0.99);
+  --t-fg: #0d1829;
+  --t-text: #2d4258;
+  --t-sub: #5b7a93;
+  --t-line: #dde5ef;
+  --t-btn-line: #c5d2e0;
+  --t-hover: rgba(0, 87, 168, 0.07);
+  --t-accent: #FFC600;
+  --t-accent-ink: #0B1733;
+  --t-link: #0057a8;
+  --t-link-bg: rgba(0, 87, 168, 0.07);
+  --t-link-line: rgba(0, 87, 168, 0.4);
+  --t-shadow: 0 12px 34px rgba(13, 24, 41, 0.16), 0 2px 6px rgba(13, 24, 41, 0.08);
+  --t-glass: rgba(255, 255, 255, 0.88);
+  --t-avatar-bg: linear-gradient(145deg, #DCF0FF, #B8D0EC);
+  --t-avatar-fg: #0057a8;
+  --t-avatar-line: rgba(0, 87, 168, 0.18);
+  --t-hl: 0, 87, 168;
+}
+
 .tour-dock {
   position: fixed;
   /* Sempre no mesmo lugar: na barra lateral é o espaço vazio logo acima do usuário (o rodapé tem 73 px) */
-  left: 12px;
-  bottom: 83px;
+  left: 8px;
+  bottom: 81px;
   z-index: 9998;
   display: flex;
   flex-direction: column;
@@ -10477,65 +10521,72 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
 }
 .tour-dock[data-mode="step"],
 .tour-dock[data-mode="invite"],
-.tour-dock[data-mode="paused"] { width: 236px; align-items: stretch; }
+.tour-dock[data-mode="paused"] { width: 244px; align-items: stretch; }
 .tour-dock.shake { animation: tourShake 0.7s ease 2; }
 
 .tour-card {
   position: relative;
-  padding: 10px 12px 12px;
-  color: #fff;
-  background: rgba(11, 23, 51, 0.97);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  padding: 14px 14px 12px;
+  color: var(--t-fg);
+  background: var(--t-bg);
+  border: 1px solid var(--t-line);
+  border-radius: 16px;
+  box-shadow: var(--t-shadow);
   animation: fadeUp 0.25s ease both;
 }
 .tour-dock[data-mode="invite"] .tour-card,
-.tour-dock[data-mode="paused"] .tour-card { border-color: rgba(255, 198, 0, 0.5); }
-.tour-progress { position: absolute; left: 14px; right: 14px; top: 0; height: 2px; border-radius: 0 0 99px 99px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
-.tour-progress i { display: block; width: calc(var(--p, 0) * 100%); height: 100%; background: #FFC600; transition: width 0.3s ease; }
-.tour-card-top { display: flex; align-items: flex-start; gap: 4px; }
-.tour-card-head { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.tour-dock[data-mode="paused"] .tour-card { border-color: var(--t-link-line); }
+.tour-progress { position: absolute; left: 16px; right: 16px; top: 0; height: 2px; border-radius: 0 0 99px 99px; background: var(--t-line); overflow: hidden; }
+.tour-progress i { display: block; width: calc(var(--p, 0) * 100%); height: 100%; background: var(--t-accent); transition: width 0.3s ease; }
+
+/* Cabeçalho: avatar, nome e perfil à esquerda; controles no canto */
+.tour-card-top { position: relative; display: block; }
+.tour-card-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .tour-card-head .who { min-width: 0; }
-.tour-card-head .who b { display: block; font-size: 12.5px; line-height: 1.2; }
-.tour-card-head .who small { display: block; margin-top: 2px; font-size: 10.5px; color: rgba(255, 255, 255, 0.6); }
-.tour-ctl { display: flex; gap: 0; margin: -2px -4px 0 0; }
+.tour-card-head .who b { display: block; font-size: 13px; line-height: 1.2; color: var(--t-fg); }
+.tour-card-head .who small { display: block; margin-top: 3px; font-size: 11px; color: var(--t-sub); }
+.tour-card-top .tour-ctl { position: absolute; top: -3px; right: -5px; display: flex; align-items: center; gap: 4px; }
 .tour-ctl button {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 7px;
-  color: rgba(255, 255, 255, 0.55);
+  border-radius: 8px;
+  color: var(--t-sub);
 }
-.tour-ctl button:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
-
-.tour-persona {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 1px 7px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 99px;
-  font-size: 10px;
+.tour-ctl button:hover { background: var(--t-hover); color: var(--t-fg); }
+.tour-ctl .tour-fold {
+  width: auto;
+  height: 24px;
+  gap: 4px;
+  padding: 0 8px;
+  font-size: 10.5px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--t-btn-line);
 }
-.tour-persona i { width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; }
-.tour-persona[data-p="funcionario"] i { background: #38bdf8; }
-.tour-persona[data-p="gestor"] i { background: #a78bfa; }
-.tour-persona[data-p="admin"] i { background: #fb923c; }
-.tour-persona[data-p="totem"] i { background: #34d399; }
 
-.tour-text { margin: 8px 0 0; font-size: 12px; line-height: 1.45; color: rgba(255, 255, 255, 0.88); }
-.tour-text b { color: #FFC600; font-weight: 700; }
+/* "Estamos no perfil: Gestor" */
+.tour-where { display: block; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--t-line); font-size: 11.5px; white-space: nowrap; color: var(--t-sub); }
+.tour-where b { color: var(--t-fg); font-weight: 800; }
+.tour-where b { display: inline; }
+.tour-where i { display: inline-block; width: 7px; height: 7px; margin-right: 6px; vertical-align: middle; border-radius: 50%; background: #94a3b8; }
+.tour-where[data-p="funcionario"] i { background: #38bdf8; }
+.tour-where[data-p="gestor"] i { background: #8b5cf6; }
+.tour-where[data-p="admin"] i { background: #f97316; }
+.tour-where[data-p="totem"] i { background: #10b981; }
+
+/* Texto da Eura */
+.tour-kicker { margin-top: 12px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--t-link); }
+.tour-text { margin: 10px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--t-text); }
+.tour-kicker + .tour-text { margin-top: 4px; }
+.tour-text b { color: var(--t-link); font-weight: 700; }
 /* O texto inteiro fica invisível por baixo do que está sendo digitado, então o cartão não muda de altura */
 .tw { display: grid; }
 .tw > * { grid-area: 1 / 1; }
 .tw-ghost { visibility: hidden; }
 .tour-typing { display: inline-flex; gap: 4px; padding: 5px 0; }
-.tour-typing span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.6); animation: tourDot 1s infinite; }
+.tour-typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--t-sub); animation: tourDot 1s infinite; }
 .tour-typing span:nth-child(2) { animation-delay: 0.15s; }
 .tour-typing span:nth-child(3) { animation-delay: 0.3s; }
 @keyframes tourDot {
@@ -10543,49 +10594,81 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   30% { opacity: 1; transform: translateY(-3px); }
 }
 
-.tour-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
-.tour-chips button {
-  padding: 3px 9px;
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(255, 198, 0, 0.5);
-  border-radius: 99px;
+/* "Veja também": rótulo e botões com seta, para ficar claro que levam a outra aba */
+.tour-also { margin-top: 12px; }
+.tour-also > span { display: block; margin-bottom: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--t-sub); }
+.tour-also-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.tour-also-btns button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 6px 4px;
+  font-size: 10.5px;
+  white-space: nowrap;
+  font-weight: 700;
+  color: var(--t-link);
+  background: var(--t-link-bg);
+  border: 1px solid var(--t-link-line);
+  border-radius: 9px;
 }
-.tour-chips button:hover { background: rgba(255, 198, 0, 0.14); color: #FFC600; }
+.tour-also-btns button:hover { background: var(--t-hover); border-color: var(--t-link); }
 
-.tour-card-foot { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
-.tour-count { flex: 1; font-size: 11px; font-weight: 700; color: #fff; white-space: nowrap; }
-.tour-count small { font-size: 10px; font-weight: 500; opacity: 0.6; margin-left: 2px; }
+/* Rodapé: contagem à esquerda, navegação à direita, separados do texto por uma linha */
+.tour-card-foot { display: flex; align-items: center; gap: 6px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--t-line); }
+.tour-count { flex: 1; font-size: 11px; font-weight: 800; color: var(--t-fg); white-space: nowrap; }
+.tour-count small { display: block; margin: 1px 0 0; font-size: 10px; font-weight: 500; color: var(--t-sub); }
 .tour-nav {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 7px 11px;
+  border: 1px solid var(--t-btn-line);
   border-radius: 9px;
   font-size: 11.5px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.88);
+  color: var(--t-fg);
 }
+.tour-nav:hover:not(:disabled) { background: var(--t-hover); }
 .tour-nav:disabled { opacity: 0.35; cursor: default; }
-.tour-nav.primary { background: #FFC600; border-color: #FFC600; color: #0B1733; }
-.tour-nav.primary:hover { filter: brightness(1.06); }
+.tour-nav.primary { background: var(--t-accent); border-color: var(--t-accent); color: var(--t-accent-ink); }
+.tour-nav.primary:hover { filter: brightness(1.06); background: var(--t-accent); }
 
-.tour-actions { display: flex; gap: 6px; margin-top: 10px; }
+/* Texto oculto: só o botão para mostrar de novo */
+.tour-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--t-link);
+  background: var(--t-link-bg);
+  border: 1px solid var(--t-link-line);
+  border-radius: 9px;
+}
+.tour-expand:hover { background: var(--t-hover); border-color: var(--t-link); }
+
+/* Convite e pausa */
+.tour-actions { display: flex; gap: 8px; margin-top: 14px; }
 .tour-actions.stack { flex-direction: column; }
 .tour-actions button {
   flex: 1;
-  padding: 7px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  padding: 8px 10px;
+  border: 1px solid var(--t-btn-line);
   border-radius: 9px;
   font-size: 11.5px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.88);
+  color: var(--t-fg);
 }
-.tour-actions button:hover { border-color: rgba(255, 198, 0, 0.6); }
-.tour-actions .primary { background: #FFC600; border-color: #FFC600; color: #0B1733; }
-.tour-actions .ghost { border-color: transparent; color: rgba(255, 255, 255, 0.55); font-weight: 600; }
+.tour-actions button:hover { background: var(--t-hover); }
+.tour-actions .primary { background: var(--t-accent); border-color: var(--t-accent); color: var(--t-accent-ink); }
+.tour-actions .primary:hover { background: var(--t-accent); filter: brightness(1.06); }
+.tour-actions .ghost { border-color: transparent; color: var(--t-sub); font-weight: 600; }
 
 /* Avatar da Eura, no mesmo estilo do chat da tela inicial */
 .tour-eura {
@@ -10593,55 +10676,39 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   place-items: center;
   flex-shrink: 0;
   border-radius: 9px;
-  background: rgba(11, 23, 51, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #FFC600;
+  background: var(--t-avatar-bg);
+  border: 1px solid var(--t-avatar-line);
+  color: var(--t-avatar-fg);
 }
 
-/* Botão do tour desligado e barra recolhida: mesmo vidro fosco do modo banca original, em tamanho maior */
+/* Botão do tour desligado: vidro fosco, no estilo do modo banca original, em tamanho maior */
 .tour-pill {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 10px 8px 14px;
-  color: rgba(255, 255, 255, 0.82);
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--t-text);
+  background: var(--t-glass);
+  border: 1px solid var(--t-btn-line);
   border-radius: 12px;
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
+  cursor: pointer;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  box-shadow: var(--t-shadow);
 }
-.tour-pill { cursor: pointer; }
-.tour-pill:hover { color: #fff; border-color: rgba(255, 255, 255, 0.3); }
-.tour-pill small { font-size: 11px; font-weight: 500; opacity: 0.65; }
+.tour-pill:hover { color: var(--t-fg); border-color: var(--t-link-line); }
+.tour-pill small { font-size: 11px; font-weight: 500; color: var(--t-sub); }
 .tour-pill.pulse { animation: tourPulse 2.2s ease-out infinite; }
-.tour-min-title { font-weight: 700; color: #fff; }
-.tour-expand {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  margin-top: 8px;
-  padding: 7px 10px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: #FFC600;
-  border: 1px solid rgba(255, 198, 0, 0.5);
-  border-radius: 9px;
-}
-.tour-expand:hover { background: rgba(255, 198, 0, 0.14); }
-
 .tour-sw {
   position: relative;
   width: 34px;
   height: 19px;
   flex-shrink: 0;
   border-radius: 99px;
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--t-btn-line);
   transition: background 0.2s;
 }
 .tour-sw::after {
@@ -10653,6 +10720,7 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   height: 15px;
   border-radius: 50%;
   background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   transition: transform 0.2s, background 0.2s;
 }
 @keyframes tourPulse {
@@ -10669,17 +10737,18 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   75% { transform: translateX(-3px); }
 }
 
+/* Dica amarela do botão (amarelo da marca nos dois temas) */
 .tour-tip {
   position: relative;
   max-width: 250px;
-  padding: 10px 30px 10px 13px;
+  padding: 11px 32px 11px 14px;
   background: #FFC600;
   color: #0B1733;
   border-radius: 12px;
   font-size: 12.5px;
   font-weight: 700;
   line-height: 1.4;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
   animation: fadeUp 0.4s ease both;
 }
 .tour-tip::after {
@@ -10694,8 +10763,8 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
 }
 .tour-tip button {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 7px;
+  right: 7px;
   width: 20px;
   height: 20px;
   display: flex;
@@ -10716,34 +10785,37 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 16px;
-  color: rgba(255, 255, 255, 0.8);
-  background: rgba(11, 23, 51, 0.95);
-  border: 1px solid rgba(255, 198, 0, 0.55);
+  padding: 10px 18px;
+  color: var(--t-text);
+  background: var(--t-bg);
+  border: 1px solid var(--t-link-line);
   border-radius: 99px;
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.34);
+  box-shadow: var(--t-shadow);
   font-family: var(--font);
   font-size: 12.5px;
   font-weight: 600;
   white-space: nowrap;
   animation: tourBanner 3.2s ease both;
 }
-.tour-switch b { color: #FFC600; font-weight: 800; }
+.tour-switch b { color: var(--t-link); font-weight: 800; }
 @keyframes tourBanner {
   0% { opacity: 0; transform: translate(-50%, -10px); }
   10%, 85% { opacity: 1; transform: translate(-50%, 0); }
   100% { opacity: 0; transform: translate(-50%, -6px); }
 }
 
+/* Destaque do item que a Eura está explicando (amarelo no escuro, azul no claro) */
 .tour-hl {
-  outline: 2px solid #FFC600 !important;
+  outline: 2px solid rgb(var(--t-hl, 255, 198, 0)) !important;
   outline-offset: 3px;
   border-radius: 10px;
   animation: tourHl 1.6s ease-in-out infinite;
 }
+html:not([data-theme="dark"]):not([data-tour-dark]) .tour-hl { --t-hl: 0, 87, 168; }
+html[data-theme="dark"] .tour-hl { --t-hl: 255, 198, 0; }
 @keyframes tourHl {
-  0%, 100% { outline-color: rgba(255, 198, 0, 1); }
-  50% { outline-color: rgba(255, 198, 0, 0.35); }
+  0%, 100% { outline-color: rgba(var(--t-hl), 1); }
+  50% { outline-color: rgba(var(--t-hl), 0.35); }
 }
 
 /* Telas estreitas: o cartão ocupa a largura de baixo */
@@ -10755,87 +10827,11 @@ button.my-mentorships-row:focus-visible .my-mentorships-row-tags span,
   .tour-pill { align-self: flex-start; }
 }
 
-/* Perfil explícito: "Estamos no perfil: Gestor" */
-.tour-where {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 8px;
-  padding: 5px 9px;
-  font-size: 11.5px;
-  color: rgba(255, 255, 255, 0.85);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 9px;
+@media (max-height: 820px) and (min-width: 641px) {
+  .tour-card { padding: 12px 14px 10px; }
+  .tour-where { margin-top: 9px; padding-top: 8px; }
+  .tour-text { margin-top: 8px; font-size: 12px; line-height: 1.5; }
+  .tour-also { margin-top: 9px; }
+  .tour-also > span { margin-bottom: 5px; }
+  .tour-card-foot { margin-top: 10px; padding-top: 9px; }
 }
-.tour-where b { color: #fff; font-weight: 800; }
-.tour-where i { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; }
-.tour-where[data-p="funcionario"] i { background: #38bdf8; }
-.tour-where[data-p="gestor"] i { background: #a78bfa; }
-.tour-where[data-p="admin"] i { background: #fb923c; }
-.tour-where[data-p="totem"] i { background: #34d399; }
-
-/* Botão que oculta o texto da Eura (com rótulo, para ficar claro o que ele faz) */
-.tour-fold {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  width: auto !important;
-  height: 22px;
-  padding: 0 7px;
-  font-size: 10.5px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 7px;
-}
-.tour-fold:hover { color: #fff; border-color: rgba(255, 255, 255, 0.35); }
-.tour-ctl { align-items: center; gap: 4px; }
-
-/* "Veja também": botões com rótulo e seta, para ficar claro que levam a outra aba */
-.tour-also { margin-top: 9px; }
-.tour-also > span { display: block; margin-bottom: 5px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: rgba(255, 255, 255, 0.55); }
-.tour-also-btns { display: flex; flex-wrap: wrap; gap: 5px; }
-.tour-also-btns button {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 10px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: #FFC600;
-  background: rgba(255, 198, 0, 0.08);
-  border: 1px solid rgba(255, 198, 0, 0.55);
-  border-radius: 9px;
-}
-.tour-also-btns button:hover { background: rgba(255, 198, 0, 0.2); }
-
-/* Cartão mais compacto: os controles ficam sobre a primeira linha do cabeçalho, o perfil na segunda */
-.tour-card-top { position: relative; display: block; }
-.tour-card-top .tour-ctl { position: absolute; top: -2px; right: -4px; margin: 0; }
-.tour-where {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.8);
-  background: none;
-  border: 0;
-}
-.tour-card-head .who small { margin-top: 1px; }
-.tour-kicker { margin-top: 8px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: #FFC600; }
-.tour-kicker + .tour-text { margin-top: 2px; }
-.tour-card-foot { margin-top: 8px; }
-
-/* "Veja também" na mesma linha dos botões */
-.tour-also { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 8px; }
-.tour-also > span { display: inline; margin: 0 2px 0 0; font-size: 10.5px; }
-.tour-also-btns { display: contents; }
-.tour-also-btns button { padding: 4px 9px; font-size: 11px; }
-
-/* Linha do perfil em fluxo normal: "Estamos no perfil: Gestor" sem quebrar em dois blocos */
-.tour-where { display: block; white-space: nowrap; }
-.tour-where i { display: inline-block; margin-right: 6px; vertical-align: middle; }
-.tour-card-head .who .tour-where b { display: inline; font-size: inherit; line-height: inherit; }
